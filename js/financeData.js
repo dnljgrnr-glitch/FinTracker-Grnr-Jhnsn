@@ -1,156 +1,170 @@
-window.FINANCE_DATA = {
-  password: "JASPER",
-  reportDate: "June 2026",
+// ============================================================
+//  FINANCEDATA.JS  — Static configuration for FinTracker
+//  Garner-Johnson Household
+// ============================================================
 
-  /* ── Goal defaults — all editable via Settings ── */
-  goalDefaults: {
-    /* Daniel — debts */
-    'd-visa-bal':      9315.95,
-    'd-visa-min':      452.82,
-    'd-visa-target':   700,
-    'd-visa-apr':      17,
-    'd-vehicle-bal':   22010.21,
-    'd-vehicle-min':   426.20,
-    'd-vehicle-apr':   9.14,
-    'd-apple-bal':     930.39,
-    'd-apple-min':     50,
-    /* Daniel — goals */
-    'd-move-target':   1950,
-    'd-income':        3200,
-    /* Sonia — debts */
-    's-nw-bal':        2266.02,
-    's-nw-min':        135.83,
-    's-nw-apr':        12.50,
-    's-family-bal':    10000,
-    's-family-pmt':    200,
-    's-apple-min':     20,
-    /* Sonia — goals */
-    's-savings-target':2500,
-    's-income':        2200,
-    /* Household */
-    'hh-rent':         800,
-    'hh-electric':     150,
-    'hh-internet':     50,
-    'hh-groceries':    300,
-    'hh-split-daniel': 59,
-    /* Spending caps */
-    'cap-daniel-gas':      175,
-    'cap-daniel-personal': 150,
-    'cap-daniel-fastfood': 60,
-    'cap-daniel-online':   50,
-    'cap-sonia-beauty':    100,
-    'cap-sonia-fastfood':  60,
-    'cap-sonia-amazon':    50,
-    'cap-sonia-applecash': 50,
+'use strict';
+
+const DATA = {
+
+  // ── Auth ────────────────────────────────────────────────
+  jasper: {
+    pass: 'JASPER2024',           // unlock password
   },
 
-  /* ── Spending cap definitions ── */
-  spendingCaps: {
-    daniel: [
-      { id: 'gas',      label: 'Gas / Transportation'  },
-      { id: 'personal', label: 'Personal / Food / Misc'},
-      { id: 'fastfood', label: 'Fast Food'              },
-      { id: 'online',   label: 'Online Shopping'        },
-    ],
-    sonia: [
-      { id: 'beauty',    label: 'Beauty / Personal Care'},
-      { id: 'fastfood',  label: 'Fast Food'             },
-      { id: 'amazon',    label: 'Amazon / Online'       },
-      { id: 'applecash', label: 'Apple Cash Transfers'  },
-    ],
+  // ── Household ───────────────────────────────────────────
+  people: ['daniel', 'sonia'],
+
+  names: {
+    daniel: 'Daniel',
+    sonia:  'Sonia',
   },
 
-  daniel: {
-    payFrequency: "Weekly RAC pay + monthly VA",
-    checklist: [
-      "Cancel ChatGPT, Spotify, Xbox Game Pass, downgrade Notion.",
-      "Cancel Planet Fitness in person — keep the receipt.",
-      "Load $300 into Bills Bucket on June 5.",
-      "Call Verizon and target $80–$120/month.",
-      "Pay vehicle loan by June 20.",
-      "Keep NFCU Visa at zero new charges.",
-      "Build Bills Bucket to $1,950 by July 10.",
-      "Start $700/month Visa payoff after the move.",
-      "Protect EasyStart Certificate until December 2026.",
-    ],
-    paychecks: [
-      ["Fri Jun 5",  "$621",    "$300 move fund · $100 vehicle reserve · $100 food/gas · $54.16 rent reserve · $66.84 floor"],
-      ["Fri Jun 12", "$621",    "$300 move fund · $150 vehicle reserve · $134 Progressive · $37 spending"],
-      ["Fri Jun 19", "$621",    "$300 move fund · $176.20 vehicle final · $30.73 Claude/Netflix · $12.50 TruStage · $50 Apple · $51.57 food/gas"],
-      ["Fri Jun 26", "$621",    "$300 move fund · $152.22 Verizon · $50 Comcast · $68.78 food/gas/personal · $50 buffer"],
-      ["VA Jun 30",  "$795.84", "$645.84 rent · $150 move fund"],
-      ["Fri Jul 3",  "$621",    "$300 move fund · $321 Visa reserve/payment"],
-      ["Fri Jul 10", "$621",    "$300 move fund · $131.82 Visa reserve · $189.18 food/gas/personal"],
-    ],
-    visaTimeline: [
-      ["Minimum only", "$452.82", "25–27 months"],
-      ["Recommended",  "$700",    "~15 months"],
-      ["Aggressive",   "$900",    "11–12 months"],
-    ],
+  // Income (monthly take-home)
+  income: {
+    daniel: { monthly: 3200, payFreq: 'biweekly' },
+    sonia:  { monthly: 2600, payFreq: 'biweekly' },
   },
 
-  sonia: {
-    payFrequency: "Biweekly payroll",
-    checklist: [
-      "Move $900 Apple Cash to Apple Savings.",
-      "Add $100 from next paycheck → $1,000 emergency savings.",
-      "Cancel Planet Fitness in person.",
-      "Log NW loan as $2,266.02 at 12.50% APR.",
-      "Send family repayment message.",
-      "Cap fast food at $60/month.",
-      "Cap beauty/personal care at $100/month.",
-      "Cap Amazon/online at $50/month.",
-      "Confirm old address obligations end at move: Rocket, electric, JJ Peters, Suburban Water.",
-    ],
-    nextPaycheck: [
-      ["Apple Savings top-off",          "$100"],
-      ["Rocket/current housing reserve", "$400"],
-      ["Utilities/trash/water reserve",  "$150"],
-      ["Northwest loan reserve",         "$68"],
-      ["Phone reserve",                  "$35"],
-      ["Food/gas",                       "$125"],
-      ["Beauty/personal",                "$40"],
-      ["Fast food",                      "$20"],
-      ["Amazon",                         "$20"],
-      ["Named-purpose Apple Cash",       "$20"],
-      ["Checking floor",                 "$122"],
-    ],
-    loanPayoff: [
-      ["$135.83 min", "19 months", "$236.27"],
-      ["$150",        "17 months", "$212.54"],
-      ["$200",        "13 months", "$157.92"],
-      ["$250",        "10 months", "$126.92"],
-      ["$300",        "8 months",  "$106.52"],
-    ],
-    familyDebtTimeline: [
-      ["Start","$10,000"],["Month 1","$9,800"],["Month 2","$9,600"],
-      ["Month 3","$9,300"],["Month 6","$8,400"],["Month 12","$6,600"],
-      ["Month 18","$4,800"],["Month 24","$3,000"],["Month 30","$1,200"],["Month 34","$0"],
-    ],
-    savingsTargets: [
-      ["Today",900],["Next paycheck",1000],["Month 1",1270],["Month 2",1540],
-      ["Month 3",1810],["Month 6",2620],["Month 12",3820],["Month 24",5620],
-    ],
+  // Household split (%)
+  split: {
+    daniel: 55,
+    sonia:  45,
   },
 
-  household: {
-    debtSequence: [
-      [1,"No overdrafts / no new Visa charges","Stops new damage"],
-      [2,"Daniel NFCU Visa","Highest APR"],
-      [3,"Sonia family debt","Relationship preservation"],
-      [4,"Sonia NW loan","$2,266.02 at 12.50% — extra after savings target"],
-      [5,"Daniel vehicle loan","Large balance at 9.14%"],
-      [6,"Investing","Only after triggers are met"],
-    ],
-    netWorth: [
-      [1, "$8,756","$21,752","$9,800","$2,148",  "$4,237", "$0",    "-$38,218"],
-      [6, "$5,826","$20,429","$8,400","$1,544",  "$6,087", "$0",    "-$30,112"],
-      [12,"$2,009","$18,774","$6,600","$757",    "$7,887", "$0",    "-$20,253"],
-      [18,"$0",    "$14,926","$4,800","$95 est.","$9,687", "$0",    "-$10,134"],
-      [24,"$0",    "$8,734", "$3,000","$0",      "$10,887","$900",  "$53"],
-      [30,"$0",    "$2,254", "$1,200","$0",      "$12,087","$1,800","$10,433"],
-      [34,"$0",    "$0",     "$0",    "$0",      "$12,887","$2,400","$15,287"],
-      [36,"$0",    "$0",     "$0",    "$0",      "$13,487","$3,000","$16,487"],
-    ],
+  // ── Move Fund ────────────────────────────────────────────
+  moveFund: {
+    targetDate:  '2026-07-10',      // July 10
+    targetAmount: 3000,
+    paychecksPerMonth: 2,           // biweekly
   },
+
+  // ── Debt Definitions ─────────────────────────────────────
+  // owner: 'daniel' | 'sonia' | 'joint'
+  // id: short key used in localStorage track: keys
+  debts: [
+    { id: 'd-visa',   owner: 'daniel', label: 'Visa',          apr: 22.99, startBal: 9315.00 },
+    { id: 'd-disc',   owner: 'daniel', label: 'Discover',      apr: 19.99, startBal: 4200.00 },
+    { id: 'd-nwln',   owner: 'daniel', label: 'NW Loan',       apr:  7.99, startBal: 2266.02 },
+    { id: 's-citi',   owner: 'sonia',  label: 'Citi Card',     apr: 24.99, startBal: 3800.00 },
+    { id: 's-stdt',   owner: 'sonia',  label: 'Student Loan',  apr:  5.50, startBal: 11400.00 },
+    { id: 'j-car',    owner: 'joint',  label: 'Car Loan',      apr:  6.25, startBal: 14800.00 },
+  ],
+
+  // ── Savings Definitions ──────────────────────────────────
+  savings: [
+    { id: 'd-emer',   owner: 'daniel', label: 'Emergency Fund', goalBal: 5000.00 },
+    { id: 'd-move',   owner: 'daniel', label: 'Move Fund',      goalBal: 3000.00 },
+    { id: 's-emer',   owner: 'sonia',  label: 'Emergency Fund', goalBal: 3000.00 },
+    { id: 's-svng',   owner: 'sonia',  label: 'Savings $2,500', goalBal: 2500.00 },
+  ],
+
+  // ── Monthly Spending Caps ────────────────────────────────
+  spendCaps: {
+    daniel: {
+      groceries: 400,
+      dining:    150,
+      transport: 200,
+      personal:  100,
+      other:     150,
+    },
+    sonia: {
+      groceries: 300,
+      dining:    120,
+      transport: 180,
+      personal:  120,
+      other:     130,
+    },
+  },
+
 };
+
+// ── Derived helpers ──────────────────────────────────────────
+
+/**
+ * Read a tracking value from localStorage.
+ * key format: "track:d-visa"
+ * Returns number or null if not set.
+ */
+function trackGet(id) {
+  const raw = localStorage.getItem('track:' + id);
+  return raw !== null ? parseFloat(raw) : null;
+}
+
+/**
+ * Return current balance for a debt/savings id.
+ * Prefers live track: value; falls back to startBal / goalBal.
+ */
+function currentBal(item) {
+  const live = trackGet(item.id);
+  if (live !== null) return live;
+  return item.startBal !== undefined ? item.startBal : item.goalBal;
+}
+
+/**
+ * Monthly interest on a debt at current balance.
+ */
+function monthlyInterest(debt) {
+  return currentBal(debt) * (debt.apr / 100 / 12);
+}
+
+/**
+ * Total monthly interest burn across all debts.
+ */
+function totalInterestBurn() {
+  return DATA.debts.reduce((sum, d) => sum + monthlyInterest(d), 0);
+}
+
+/**
+ * Total current debt across all debts.
+ */
+function totalDebt() {
+  return DATA.debts.reduce((sum, d) => sum + currentBal(d), 0);
+}
+
+/**
+ * Total savings across all savings items.
+ */
+function totalSavings() {
+  return DATA.savings.reduce((sum, s) => {
+    const live = trackGet(s.id);
+    return sum + (live !== null ? live : 0);
+  }, 0);
+}
+
+/**
+ * Move fund countdown data.
+ */
+function moveFundCountdown() {
+  const today = new Date();
+  const target = new Date(DATA.moveFund.targetDate);
+  const diffMs = target - today;
+  const daysLeft = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+
+  // Paychecks remaining until target
+  const weeksLeft = daysLeft / 7;
+  const payFreq = DATA.income.daniel.payFreq === 'biweekly' ? 2 : 4; // per month
+  const paychecksLeft = Math.floor(weeksLeft / 2); // biweekly
+
+  const moveSavings = DATA.savings.find(s => s.id === 'd-move');
+  const currentMoveBal = trackGet('d-move') || 0;
+  const remaining = Math.max(0, DATA.moveFund.targetAmount - currentMoveBal);
+  const perPaycheck = paychecksLeft > 0 ? remaining / paychecksLeft : remaining;
+
+  return { daysLeft, paychecksLeft, remaining, perPaycheck, targetAmount: DATA.moveFund.targetAmount, currentBal: currentMoveBal };
+}
+
+/**
+ * Read wallet balance (checking/savings) for a person.
+ */
+function walletGet(person, type) {
+  const raw = localStorage.getItem('wallet:' + person + ':' + type);
+  return raw !== null ? parseFloat(raw) : 0;
+}
+
+/**
+ * Save wallet balance.
+ */
+function walletSet(person, type, val) {
+  localStorage.setItem('wallet:' + person + ':' + type, val);
+}
