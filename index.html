@@ -3,56 +3,57 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#111827" />
-  <meta name="description" content="Private household financial plan tracker for Garner-Johnson." />
-  <title>Garner-Johnson Financial Tracker</title>
+  <meta name="theme-color" content="#0b0d17" />
+  <meta name="description" content="Garner-Johnson private financial planning dashboard." />
+  <title>GJ Financial</title>
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
 
   <a href="#main-content" class="skip-link">Skip to main content</a>
 
+  <!-- Login -->
   <div id="login" class="login-screen" role="dialog" aria-modal="true" aria-labelledby="loginHeading">
     <form class="login-card" id="loginForm" novalidate>
-      <p class="eyebrow" aria-hidden="true">Private Household Tool</p>
-      <h1 id="loginHeading">Financial Plan Tracker</h1>
-      <p>Enter the passcode to open the execution dashboard.</p>
+      <p class="eyebrow">Private · Household</p>
+      <h1 id="loginHeading">GJ Financial</h1>
+      <p>Enter your passcode to continue.</p>
       <div class="field-group">
         <label for="passwordInput">Passcode</label>
-        <input id="passwordInput" type="password" placeholder="Enter passcode" autocomplete="current-password" aria-required="true" aria-describedby="loginError loginNote" />
+        <input id="passwordInput" type="password" placeholder="••••••" autocomplete="current-password" aria-required="true" aria-describedby="loginError loginNote" />
       </div>
-      <button type="submit" class="btn-primary full-width">Unlock Dashboard</button>
+      <button type="submit" class="btn-primary full-width">Unlock</button>
       <p id="loginError" class="error" role="alert" aria-live="assertive"></p>
-      <p id="loginNote" class="fine-print">⚠️ Client-side passcode only — not bank-grade security. Do not store account numbers, SSNs, or full credentials in this app.</p>
+      <p id="loginNote" class="fine-print">Client-side passcode only. No data is ever transmitted.</p>
     </form>
   </div>
 
+  <!-- Header -->
   <header class="app-header" role="banner">
     <div class="header-text">
-      <p class="eyebrow">June 2026 Execution Plan</p>
-      <h1>Garner-Johnson Tracker</h1>
-      <p class="subtitle">Paycheck allocation · debt payoff · savings · quarterly review</p>
+      <p class="eyebrow">Financial Planning Dashboard</p>
+      <h1>GJ Financial</h1>
+      <p class="subtitle">Garner · Johnson · 2026 and beyond</p>
     </div>
     <div class="header-actions" role="toolbar" aria-label="App controls">
       <span id="lastUpdatedDisplay" class="last-updated" aria-live="polite"></span>
-      <button id="privacyBtn" class="btn-secondary" aria-pressed="false" title="Toggle privacy mode">
-        <span aria-hidden="true">👁</span>
-        <span class="btn-label">Hide $</span>
+      <button id="privacyBtn" class="btn-secondary" aria-pressed="false" title="Hide dollar amounts">
+        <span aria-hidden="true">👁</span><span class="btn-label">Hide $</span>
       </button>
-      <a class="btn-secondary" href="docs/Garner_Johnson_Financial_Execution_Package_v3.pdf" target="_blank" rel="noopener" aria-label="Open PDF report in new tab">PDF</a>
-      <button id="printBtn" class="btn-secondary" aria-label="Print this page">Print</button>
-      <button id="resetBtn" class="btn-danger" aria-label="Reset all saved progress data">Reset</button>
-      <button id="lockBtn" class="btn-secondary" aria-label="Lock app and return to passcode screen">Lock</button>
+      <button id="printBtn" class="btn-secondary" aria-label="Print">Print</button>
+      <button id="resetBtn" class="btn-danger" aria-label="Reset all data">Reset</button>
+      <button id="lockBtn" class="btn-secondary" aria-label="Lock">Lock</button>
     </div>
   </header>
 
-  <nav class="tabs" aria-label="Financial tracker sections" role="tablist">
-    <button class="tab active" role="tab" aria-selected="true"  aria-controls="dashboard" data-target="dashboard">Dashboard</button>
-    <button class="tab"        role="tab" aria-selected="false" aria-controls="daniel"    data-target="daniel">Daniel</button>
-    <button class="tab"        role="tab" aria-selected="false" aria-controls="sonia"     data-target="sonia">Sonia</button>
-    <button class="tab"        role="tab" aria-selected="false" aria-controls="household" data-target="household">Household</button>
-    <button class="tab"        role="tab" aria-selected="false" aria-controls="review"    data-target="review">Review</button>
-    <button class="tab"        role="tab" aria-selected="false" aria-controls="settings"  data-target="settings">Settings</button>
+  <!-- Main tabs -->
+  <nav class="tabs" aria-label="App sections" role="tablist">
+    <button class="tab active" role="tab" aria-selected="true"  data-target="dashboard">Dashboard</button>
+    <button class="tab"        role="tab" aria-selected="false" data-target="daniel">Daniel</button>
+    <button class="tab"        role="tab" aria-selected="false" data-target="sonia">Sonia</button>
+    <button class="tab"        role="tab" aria-selected="false" data-target="household">Household</button>
+    <button class="tab"        role="tab" aria-selected="false" data-target="planning">Planning</button>
+    <button class="tab"        role="tab" aria-selected="false" data-target="settings">Settings</button>
   </nav>
 
   <main id="main-content">
@@ -60,13 +61,13 @@
     <section id="daniel"    class="panel"        role="tabpanel" tabindex="-1"></section>
     <section id="sonia"     class="panel"        role="tabpanel" tabindex="-1"></section>
     <section id="household" class="panel"        role="tabpanel" tabindex="-1"></section>
-    <section id="review"    class="panel"        role="tabpanel" tabindex="-1"></section>
+    <section id="planning"  class="panel"        role="tabpanel" tabindex="-1"></section>
     <section id="settings"  class="panel"        role="tabpanel" tabindex="-1"></section>
   </main>
 
   <footer role="contentinfo">
-    <p>Operating rule: <strong>every paycheck is assigned before spending starts.</strong></p>
-    <p class="fine-print">Static app — no data leaves this device. Progress stored in localStorage only.</p>
+    <p><strong>Operating rule:</strong> every paycheck is assigned before spending starts.</p>
+    <p class="fine-print">All data stays on this device. Nothing is transmitted.</p>
   </footer>
 
   <script src="js/financeData.js"></script>
