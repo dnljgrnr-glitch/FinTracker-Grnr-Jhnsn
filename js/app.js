@@ -98,9 +98,9 @@ function renderLock() {
     <div class="lock-screen">
       <div class="lock-card">
         <div class="lock-icon">🔒</div>
-        <h2>JASPER Required</h2>
-        <p>Enter the household passphrase to continue.</p>
-        <input id="jasperInput" type="password" placeholder="Passphrase" class="lock-input" />
+        <h2>Household Access</h2>
+        <p>Enter the passphrase to continue.</p>
+        <input id="jasperInput" type="password" placeholder="Passphrase" class="lock-input" autocomplete="off" />
         <button id="jasperBtn" class="btn-primary">Unlock</button>
         <div id="lockError" class="lock-error"></div>
       </div>
@@ -108,22 +108,29 @@ function renderLock() {
   `;
 }
 
-async function sha256(str) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+// Simple synchronous hash — no async, no crypto.subtle, no failure modes
+function simpleHash(str) {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) {
+    h = ((h << 5) + h) ^ str.charCodeAt(i);
+    h = h >>> 0;
+  }
+  return h.toString(16);
 }
 
-async function attemptUnlock() {
+function attemptUnlock() {
   const input = document.getElementById('jasperInput');
   if (!input) return;
-  const hash = await sha256(input.value.trim().toUpperCase());
-  if (hash === DATA.jasper.hash) {
+  const val = input.value.trim().toUpperCase();
+  if (simpleHash(val) === DATA.jasper.hash) {
     unlocked = true;
     localStorage.setItem('jasper_unlocked', 'true');
     renderAll();
   } else {
     const err = document.getElementById('lockError');
     if (err) err.textContent = 'Incorrect passphrase.';
+    input.value = '';
+    input.focus();
   }
 }
 window.attemptUnlock = attemptUnlock;
