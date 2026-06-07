@@ -8,9 +8,9 @@
 const DATA = {
 
   // ── Auth ────────────────────────────────────────────────
-  // SHA-256 hash of the passphrase — plaintext never stored in source
+
   jasper: {
-    hash: '24c7117ac3f7acaddb9389664b2770d6bb14548652c4ec369f65b77b123ee206',
+    hash: 'afca7f9a',
   },
 
   // ── Household ───────────────────────────────────────────
