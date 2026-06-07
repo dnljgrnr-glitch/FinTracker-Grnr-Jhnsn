@@ -101,21 +101,29 @@ function renderLock() {
         <h2>JASPER Required</h2>
         <p>Enter the household passphrase to continue.</p>
         <input id="jasperInput" type="password" placeholder="Passphrase" class="lock-input" />
-        <button class="btn-primary" onclick="attemptUnlock()">Unlock</button>
+        <button id="jasperBtn" class="btn-primary">Unlock</button>
         <div id="lockError" class="lock-error"></div>
       </div>
     </div>
   `;
 }
 
-function attemptUnlock() {
-  const val = document.getElementById('jasperInput').value.trim().toUpperCase();
-  if (val === DATA.jasper.pass) {
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function attemptUnlock() {
+  const input = document.getElementById('jasperInput');
+  if (!input) return;
+  const hash = await sha256(input.value.trim().toUpperCase());
+  if (hash === DATA.jasper.hash) {
     unlocked = true;
     localStorage.setItem('jasper_unlocked', 'true');
     renderAll();
   } else {
-    document.getElementById('lockError').textContent = 'Incorrect passphrase.';
+    const err = document.getElementById('lockError');
+    if (err) err.textContent = 'Incorrect passphrase.';
   }
 }
 window.attemptUnlock = attemptUnlock;
@@ -857,12 +865,17 @@ function updateSnapshotCell(id, current) {
 
 // ── Bind post-render events ───────────────────────────────────
 function bindBodyEvents() {
-  // Jasper unlock input — enter key
+  // Jasper unlock — button click
+  const btn = document.getElementById('jasperBtn');
+  if (btn) btn.addEventListener('click', attemptUnlock);
+
+  // Jasper unlock — Enter key
   const ji = document.getElementById('jasperInput');
   if (ji) {
     ji.addEventListener('keydown', e => {
       if (e.key === 'Enter') attemptUnlock();
     });
+    ji.focus();
   }
 }
 
