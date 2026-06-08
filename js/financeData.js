@@ -8,9 +8,8 @@
 const DATA = {
 
   // ── Auth ────────────────────────────────────────────────
-
   jasper: {
-    hash: 'afca7f9a',
+    pass: 'JASPER',
   },
 
   // ── Household ───────────────────────────────────────────
@@ -35,19 +34,17 @@ const DATA = {
 
   // ── Move Fund ────────────────────────────────────────────
   moveFund: {
-    targetDate:  '2026-07-10',      // July 10
+    targetDate:   '2026-07-10',
     targetAmount: 3000,
-    paychecksPerMonth: 2,           // biweekly
+    paychecksPerMonth: 2,
   },
 
   // ── Debt Definitions ─────────────────────────────────────
-  // owner: 'daniel' | 'sonia' | 'joint'
-  // id: short key used in localStorage track: keys
   debts: [
-    { id: 'd-visa',   owner: 'daniel', label: 'Visa',          apr: 22.99, startBal: 9315.00 },
-    { id: 'd-disc',   owner: 'daniel', label: 'Discover',      apr: 19.99, startBal: 4200.00 },
-    { id: 'd-nwln',   owner: 'daniel', label: 'NW Loan',       apr:  7.99, startBal: 2266.02 },
-    { id: 's-citi',   owner: 'sonia',  label: 'Citi Card',     apr: 24.99, startBal: 3800.00 },
+    { id: 'd-visa',   owner: 'daniel', label: 'Visa',          apr: 22.99, startBal: 9315.00  },
+    { id: 'd-disc',   owner: 'daniel', label: 'Discover',      apr: 19.99, startBal: 4200.00  },
+    { id: 'd-nwln',   owner: 'daniel', label: 'NW Loan',       apr:  7.99, startBal: 2266.02  },
+    { id: 's-citi',   owner: 'sonia',  label: 'Citi Card',     apr: 24.99, startBal: 3800.00  },
     { id: 's-stdt',   owner: 'sonia',  label: 'Student Loan',  apr:  5.50, startBal: 11400.00 },
     { id: 'j-car',    owner: 'joint',  label: 'Car Loan',      apr:  6.25, startBal: 14800.00 },
   ],
@@ -82,50 +79,29 @@ const DATA = {
 
 // ── Derived helpers ──────────────────────────────────────────
 
-/**
- * Read a tracking value from localStorage.
- * key format: "track:d-visa"
- * Returns number or null if not set.
- */
 function trackGet(id) {
   const raw = localStorage.getItem('track:' + id);
   return raw !== null ? parseFloat(raw) : null;
 }
 
-/**
- * Return current balance for a debt/savings id.
- * Prefers live track: value; falls back to startBal / goalBal.
- */
 function currentBal(item) {
   const live = trackGet(item.id);
   if (live !== null) return live;
   return item.startBal !== undefined ? item.startBal : item.goalBal;
 }
 
-/**
- * Monthly interest on a debt at current balance.
- */
 function monthlyInterest(debt) {
   return currentBal(debt) * (debt.apr / 100 / 12);
 }
 
-/**
- * Total monthly interest burn across all debts.
- */
 function totalInterestBurn() {
   return DATA.debts.reduce((sum, d) => sum + monthlyInterest(d), 0);
 }
 
-/**
- * Total current debt across all debts.
- */
 function totalDebt() {
   return DATA.debts.reduce((sum, d) => sum + currentBal(d), 0);
 }
 
-/**
- * Total savings across all savings items.
- */
 function totalSavings() {
   return DATA.savings.reduce((sum, s) => {
     const live = trackGet(s.id);
@@ -133,39 +109,23 @@ function totalSavings() {
   }, 0);
 }
 
-/**
- * Move fund countdown data.
- */
 function moveFundCountdown() {
-  const today = new Date();
-  const target = new Date(DATA.moveFund.targetDate);
-  const diffMs = target - today;
-  const daysLeft = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
-
-  // Paychecks remaining until target
-  const weeksLeft = daysLeft / 7;
-  const payFreq = DATA.income.daniel.payFreq === 'biweekly' ? 2 : 4; // per month
-  const paychecksLeft = Math.floor(weeksLeft / 2); // biweekly
-
-  const moveSavings = DATA.savings.find(s => s.id === 'd-move');
+  const today      = new Date();
+  const target     = new Date(DATA.moveFund.targetDate);
+  const diffMs     = target - today;
+  const daysLeft   = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+  const paychecksLeft = Math.max(1, Math.floor(daysLeft / 14));
   const currentMoveBal = trackGet('d-move') || 0;
-  const remaining = Math.max(0, DATA.moveFund.targetAmount - currentMoveBal);
-  const perPaycheck = paychecksLeft > 0 ? remaining / paychecksLeft : remaining;
-
+  const remaining  = Math.max(0, DATA.moveFund.targetAmount - currentMoveBal);
+  const perPaycheck = remaining / paychecksLeft;
   return { daysLeft, paychecksLeft, remaining, perPaycheck, targetAmount: DATA.moveFund.targetAmount, currentBal: currentMoveBal };
 }
 
-/**
- * Read wallet balance (checking/savings) for a person.
- */
 function walletGet(person, type) {
   const raw = localStorage.getItem('wallet:' + person + ':' + type);
   return raw !== null ? parseFloat(raw) : 0;
 }
 
-/**
- * Save wallet balance.
- */
 function walletSet(person, type, val) {
   localStorage.setItem('wallet:' + person + ':' + type, val);
 }
