@@ -1,18 +1,15 @@
 // ============================================================
-//  FINANCEDATA.JS  — Static configuration for FinTracker
-//  Garner-Johnson Household
+//  FINANCEDATA.JS  — FinTracker Garner-Johnson
 // ============================================================
 
 'use strict';
 
 const DATA = {
 
-  // ── Auth ────────────────────────────────────────────────
   jasper: {
     pass: 'JASPER',
   },
 
-  // ── Household ───────────────────────────────────────────
   people: ['daniel', 'sonia'],
 
   names: {
@@ -20,26 +17,22 @@ const DATA = {
     sonia:  'Sonia',
   },
 
-  // Income (monthly take-home)
   income: {
     daniel: { monthly: 3200, payFreq: 'biweekly' },
     sonia:  { monthly: 2600, payFreq: 'biweekly' },
   },
 
-  // Household split (%)
   split: {
     daniel: 55,
     sonia:  45,
   },
 
-  // ── Move Fund ────────────────────────────────────────────
   moveFund: {
     targetDate:   '2026-07-10',
     targetAmount: 3000,
     paychecksPerMonth: 2,
   },
 
-  // ── Debt Definitions ─────────────────────────────────────
   debts: [
     { id: 'd-visa',   owner: 'daniel', label: 'Visa',          apr: 22.99, startBal: 9315.00  },
     { id: 'd-disc',   owner: 'daniel', label: 'Discover',      apr: 19.99, startBal: 4200.00  },
@@ -49,15 +42,13 @@ const DATA = {
     { id: 'j-car',    owner: 'joint',  label: 'Car Loan',      apr:  6.25, startBal: 14800.00 },
   ],
 
-  // ── Savings Definitions ──────────────────────────────────
   savings: [
-    { id: 'd-emer',   owner: 'daniel', label: 'Emergency Fund', goalBal: 5000.00 },
-    { id: 'd-move',   owner: 'daniel', label: 'Move Fund',      goalBal: 3000.00 },
-    { id: 's-emer',   owner: 'sonia',  label: 'Emergency Fund', goalBal: 3000.00 },
-    { id: 's-svng',   owner: 'sonia',  label: 'Savings $2,500', goalBal: 2500.00 },
+    { id: 'd-emer', owner: 'daniel', label: 'Emergency Fund', goalBal: 5000.00 },
+    { id: 'd-move', owner: 'daniel', label: 'Move Fund',      goalBal: 3000.00 },
+    { id: 's-emer', owner: 'sonia',  label: 'Emergency Fund', goalBal: 3000.00 },
+    { id: 's-svng', owner: 'sonia',  label: 'Savings $2,500', goalBal: 2500.00 },
   ],
 
-  // ── Monthly Spending Caps ────────────────────────────────
   spendCaps: {
     daniel: {
       groceries: 400,
@@ -76,8 +67,6 @@ const DATA = {
   },
 
 };
-
-// ── Derived helpers ──────────────────────────────────────────
 
 function trackGet(id) {
   const raw = localStorage.getItem('track:' + id);
@@ -110,14 +99,13 @@ function totalSavings() {
 }
 
 function moveFundCountdown() {
-  const today      = new Date();
-  const target     = new Date(DATA.moveFund.targetDate);
-  const diffMs     = target - today;
-  const daysLeft   = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
-  const paychecksLeft = Math.max(1, Math.floor(daysLeft / 14));
+  const today          = new Date();
+  const target         = new Date(DATA.moveFund.targetDate);
+  const daysLeft       = Math.max(0, Math.ceil((target - today) / 86400000));
+  const paychecksLeft  = Math.max(1, Math.floor(daysLeft / 14));
   const currentMoveBal = trackGet('d-move') || 0;
-  const remaining  = Math.max(0, DATA.moveFund.targetAmount - currentMoveBal);
-  const perPaycheck = remaining / paychecksLeft;
+  const remaining      = Math.max(0, DATA.moveFund.targetAmount - currentMoveBal);
+  const perPaycheck    = remaining / paychecksLeft;
   return { daysLeft, paychecksLeft, remaining, perPaycheck, targetAmount: DATA.moveFund.targetAmount, currentBal: currentMoveBal };
 }
 
