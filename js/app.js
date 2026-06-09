@@ -1,896 +1,673 @@
-// ============================================================
-//  APP.JS  — FinTracker Garner-Johnson  v8.0
-//  Audit fixes applied:
-//   1. Slider goal input: data-si-goal only (no data-goal dupe)
-//   2. Dashboard totalDebt uses track: not startBal
-//   3. Roadmap milestones read from track: not walletGet()
-//   4. Debt Snapshot tables use track: with startBal fallback
-//   5. Dead code moInterest removed
-//   6. Settings: no debt/savings amounts — only spending/income/APR/split
-//   7. Balance Log: one-button snapshot, no re-entry
-//   8. Restored: Move Fund countdown
-//   9. Restored: Monthly interest burn
-//  10. Debt slider labels: "Started At" not "Goal"
-// ============================================================
+/**
+ * Garner-Johnson Financial Tracker · app.js
+ * Vanilla JS — no dependencies — GitHub Pages compatible
+ * Requires: financeData.js loaded first (window.FINANCE_DATA)
+ */
 
 'use strict';
 
-// ── State ────────────────────────────────────────────────────
-let unlocked  = false;
-let activeTab = 'dashboard';
-let activePerson = 'daniel';
+/* ─── Globals ─────────────────────────────────────────── */
+const DATA = window.FINANCE_DATA;
 
-// ── Init ─────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  checkJasper();
-  renderAll();
-  wireGlobalEvents();
-});
+// Short selector helpers
+const $  = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
-function checkJasper() {
-  const stored = localStorage.getItem('jasper_unlocked');
-  if (stored === 'true') {
-    unlocked = true;
-  }
-}
+// Currency formatter
+const money = n =>
+  typeof n === 'number'
+    ? n.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
+    : (n ?? '—');
 
-function wireGlobalEvents() {
-  // Tab bar
-  document.querySelectorAll('[data-tab]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      activeTab = btn.dataset.tab;
-      renderAll();
-    });
-  });
+// Wrap a money value in a span that privacy-mode can blur
+const priv = (val) => `<span class="private-value">${money(val)}</span>`;
 
-  // Person selector
-  document.querySelectorAll('[data-person]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      activePerson = btn.dataset.person;
-      renderAll();
-    });
-  });
+/* ─── LocalStorage helpers ────────────────────────────── */
+const LS = {
+  get:    (k, fallback = null) => { try { const v = localStorage.getItem(k); return v === null ? fallback : JSON.parse(v); } catch { return fallback; } },
+  set:    (k, v)              => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* quota / private mode */ } },
+  remove: (k)                 => { try { localStorage.removeItem(k); } catch {} },
+  keys:   (prefix)            => { try { return Object.keys(localStorage).filter(k => k.startsWith(prefix)); } catch { return []; } },
+};
 
-  // Slider delegation
-  document.addEventListener('input', handleSliderInput);
-  document.addEventListener('change', handleSliderChange);
-}
+/* ─── Auth ────────────────────────────────────────────── */
+function auth() {
+  const loginEl = $('#login');
 
-// ── Render All ───────────────────────────────────────────────
-function renderAll() {
-  renderNav();
-  renderBody();
-}
-
-function renderNav() {
-  const tabs = ['dashboard', 'daniel', 'sonia', 'roadmap', 'settings'];
-  const labels = { dashboard: 'Dashboard', daniel: 'Daniel', sonia: 'Sonia', roadmap: 'Roadmap', settings: 'Settings' };
-  const nav = document.getElementById('nav');
-  if (!nav) return;
-  nav.innerHTML = tabs.map(t => `
-    <button data-tab="${t}" class="nav-btn ${activeTab === t ? 'active' : ''}">${labels[t]}</button>
-  `).join('');
-  nav.querySelectorAll('[data-tab]').forEach(btn => {
-    btn.addEventListener('click', () => { activeTab = btn.dataset.tab; renderAll(); });
-  });
-}
-
-function renderBody() {
-  const body = document.getElementById('body');
-  if (!body) return;
-  if (!unlocked) { body.innerHTML = renderLock(); return; }
-
-  switch (activeTab) {
-    case 'dashboard': body.innerHTML = renderDashboard(); break;
-    case 'daniel':    body.innerHTML = renderPerson('daniel'); break;
-    case 'sonia':     body.innerHTML = renderPerson('sonia'); break;
-    case 'roadmap':   body.innerHTML = renderRoadmap(); break;
-    case 'settings':  body.innerHTML = renderSettings(); break;
-    default:          body.innerHTML = renderDashboard();
+  // Already unlocked this session
+  if (sessionStorage.getItem('financeUnlocked') === 'true') {
+    loginEl.style.display = 'none';
+    return;
   }
 
-  bindBodyEvents();
+  // Focus passcode input after small delay (overlay is visible)
+  setTimeout(() => $('#passwordInput').focus(), 80);
+
+  $('#loginForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const val = $('#passwordInput').value.trim();
+    if (val === DATA.password) {
+      sessionStorage.setItem('financeUnlocked', 'true');
+      loginEl.style.display = 'none';
+      $('#main-content').focus();
+    } else {
+      const err = $('#loginError');
+      err.textContent = 'Incorrect passcode — try again.';
+      $('#passwordInput').value = '';
+      $('#passwordInput').focus();
+      // Clear error after 4 s
+      setTimeout(() => { err.textContent = ''; }, 4000);
+    }
+  });
+
+  $('#lockBtn').addEventListener('click', () => {
+    sessionStorage.removeItem('financeUnlocked');
+    location.reload();
+  });
 }
 
-// ── Lock Screen ──────────────────────────────────────────────
-function renderLock() {
+/* ─── Builder helpers ─────────────────────────────────── */
+
+/** Responsive scrollable table */
+function table(headers, rows, opts = {}) {
+  const ths = headers.map(h => `<th scope="col">${h}</th>`).join('');
+  const trs = rows.map(r => {
+    const cls = opts.rowClass ? ` class="${opts.rowClass(r)}"` : '';
+    return `<tr${cls}>${r.map((c, i) => {
+      const tag = i === 0 ? 'th scope="row"' : 'td';
+      return `<${tag}>${c}</${tag.split(' ')[0]}>`;
+    }).join('')}</tr>`;
+  }).join('');
+  const caption = opts.caption ? `<caption class="sr-only">${opts.caption}</caption>` : '';
+  return `<div class="table-wrap" role="region" aria-label="${opts.label || 'Table'}" tabindex="0">
+    <table>${caption}<thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table></div>`;
+}
+
+/** Card wrapper */
+function card(title, body, span = 'span-6') {
+  return `<div class="card ${span}"><h2>${title}</h2>${body}</div>`;
+}
+
+/** Callout / tip block */
+function proTip(text) {
+  return `<div class="pro-tip"><strong>💡 Key Rule</strong>${text}</div>`;
+}
+
+/** Notice / warning block */
+function notice(text) {
+  return `<div class="notice"><strong>⚠️ Note</strong>${text}</div>`;
+}
+
+/* ─── Progress tracker ────────────────────────────────── */
+
+/**
+ * Renders a progress bar + editable input bound to localStorage.
+ * @param {string} id        - unique storage key
+ * @param {string} label     - display name
+ * @param {number} fallback  - default starting value
+ * @param {number} target    - goal value
+ */
+function tracker(id, label, fallback, target) {
+  const current = Number(LS.get(`tracker:${id}`, fallback));
+  const pct = Math.max(0, Math.min(100, (current / target) * 100)).toFixed(1);
+  const fillClass = pct >= 100 ? 'full' : pct >= 60 ? '' : pct >= 30 ? 'warn' : 'bad';
+
   return `
-    <div class="lock-screen">
-      <div class="lock-card">
-        <div class="lock-icon">🔒</div>
-        <h2>Household Access</h2>
-        <p>Enter the passphrase to continue.</p>
-        <input id="jasperInput" type="password" placeholder="Passphrase" class="lock-input" autocomplete="off" />
-        <button id="jasperBtn" class="btn-primary">Unlock</button>
-        <div id="lockError" class="lock-error"></div>
-      </div>
+  <div class="progress-wrap" data-tracker="${id}" data-target="${target}" data-fallback="${fallback}">
+    <div class="progress-header">
+      <span class="progress-label-text">${label}</span>
+      <span class="progress-amounts private-value">${money(current)} / ${money(target)}</span>
+      <span class="progress-pct" aria-label="${pct}% complete">${pct}%</span>
     </div>
-  `;
+    <div class="progress-bar" role="progressbar" aria-valuenow="${current}" aria-valuemin="0" aria-valuemax="${target}" aria-label="${label}">
+      <div class="progress-fill ${fillClass}" style="width:${pct}%"></div>
+    </div>
+    <div class="tracker-row">
+      <label>
+        Update balance
+        <input type="number" step="0.01" min="0" value="${current}"
+          aria-label="Current value for ${label}"
+          data-tracker-input="${id}" />
+      </label>
+      <label>
+        Target
+        <input type="number" value="${target}" disabled
+          aria-label="Target value for ${label}" />
+      </label>
+    </div>
+  </div>`;
 }
 
-// Simple synchronous hash — no async, no crypto.subtle, no failure modes
-function simpleHash(str) {
-  let h = 5381;
-  for (let i = 0; i < str.length; i++) {
-    h = ((h << 5) + h) ^ str.charCodeAt(i);
-    h = h >>> 0;
-  }
-  return h.toString(16);
+/* ─── Checklist ───────────────────────────────────────── */
+function checklist(id, items) {
+  const saved = LS.get(`checks:${id}`, {});
+  const doneCount = items.filter((_, i) => saved[i]).length;
+  const rows = items.map((item, i) => {
+    const checked = saved[i] ? 'checked' : '';
+    const doneClass = saved[i] ? 'done' : '';
+    return `
+    <div class="check-row ${doneClass}">
+      <input type="checkbox" id="${id}-${i}"
+        data-list="${id}" data-index="${i}" ${checked}
+        aria-describedby="${id}-label-${i}" />
+      <label for="${id}-${i}" id="${id}-label-${i}">${item}</label>
+    </div>`;
+  }).join('');
+
+  return `
+  <p class="checklist-summary" aria-live="polite" id="${id}-summary">
+    ${doneCount} of ${items.length} complete
+  </p>
+  <div class="checklist" role="group" aria-label="${id} checklist">${rows}</div>`;
 }
 
-function attemptUnlock() {
-  const input = document.getElementById('jasperInput');
-  if (!input) return;
-  const val = input.value.trim().toUpperCase();
-  if (simpleHash(val) === DATA.jasper.hash) {
-    unlocked = true;
-    localStorage.setItem('jasper_unlocked', 'true');
-    renderAll();
+/* ─── Debt snapshot rows ──────────────────────────────── */
+function debtRows(person) {
+  return person.debts.map(d => [
+    d.name,
+    d.balance ? priv(d.balance) : '<em>TBD</em>',
+    d.apr,
+    d.targetPayment
+      ? `${priv(d.minimum)} min / ${priv(d.targetPayment)} target`
+      : d.targetPaymentMonth3
+        ? `${priv(d.minimum)} → ${priv(d.targetPaymentMonth3)} (mo 3+)`
+        : priv(d.minimum),
+  ]);
+}
+
+/* ─── lastUpdated display ─────────────────────────────── */
+function refreshLastUpdated() {
+  const ts = LS.get('lastUpdated', null);
+  const el = $('#lastUpdatedDisplay');
+  if (!el) return;
+  if (ts) {
+    const d = new Date(ts);
+    el.textContent = `Saved ${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
   } else {
-    const err = document.getElementById('lockError');
-    if (err) err.textContent = 'Incorrect passphrase.';
-    input.value = '';
-    input.focus();
+    el.textContent = '';
   }
 }
-window.attemptUnlock = attemptUnlock;
 
-function lock() {
-  unlocked = false;
-  localStorage.removeItem('jasper_unlocked');
-  renderAll();
+function touchLastUpdated() {
+  LS.set('lastUpdated', new Date().toISOString());
+  refreshLastUpdated();
 }
-window.lock = lock;
 
-// ── Dashboard ────────────────────────────────────────────────
+/* ─── Render sections ─────────────────────────────────── */
+
 function renderDashboard() {
-  const debt     = totalDebt();         // uses track: live values
-  const savings  = totalSavings();
-  const interest = totalInterestBurn();
-  const move     = moveFundCountdown();
+  const D = DATA.daniel;
+  const S = DATA.sonia;
+  const H = DATA.household;
 
-  const dWallet  = walletGet('daniel', 'checking') + walletGet('daniel', 'savings');
-  const sWallet  = walletGet('sonia',  'checking') + walletGet('sonia',  'savings');
-  const combined = dWallet + sWallet;
+  $('#dashboard').innerHTML = `<div class="grid">
 
-  const totalIncome = DATA.income.daniel.monthly + DATA.income.sonia.monthly;
-
-  return `
-    <div class="dashboard">
-      <header class="dash-header">
-        <h1>Garner-Johnson</h1>
-        <span class="lock-btn" onclick="lock()">Lock</span>
-      </header>
-
-      <div class="hero-grid">
-        <div class="hero-card red">
-          <div class="hero-label">Total Debt</div>
-          <div class="hero-value">${fmt(debt)}</div>
-        </div>
-        <div class="hero-card green">
-          <div class="hero-label">Total Savings</div>
-          <div class="hero-value">${fmt(savings)}</div>
-        </div>
-        <div class="hero-card blue">
-          <div class="hero-label">Combined Wallets</div>
-          <div class="hero-value">${fmt(combined)}</div>
-        </div>
-        <div class="hero-card amber">
-          <div class="hero-label">Monthly Interest Burn</div>
-          <div class="hero-value">${fmt(interest)}<span class="hero-sub">/mo</span></div>
-        </div>
+    ${card('Household Snapshot', `
+      <div class="metric">
+        <span>Combined monthly income</span>
+        <strong class="private-value">${money(H.incomeMonthly)}</strong>
       </div>
-
-      <div class="section-title">Move Fund Countdown</div>
-      <div class="move-card">
-        <div class="move-row">
-          <span class="move-label">Days to July 10</span>
-          <span class="move-val">${move.daysLeft}</span>
-        </div>
-        <div class="move-row">
-          <span class="move-label">Paychecks Left</span>
-          <span class="move-val">${move.paychecksLeft}</span>
-        </div>
-        <div class="move-row">
-          <span class="move-label">Remaining to Goal</span>
-          <span class="move-val">${fmt(move.remaining)}</span>
-        </div>
-        <div class="move-row highlight">
-          <span class="move-label">Needed Per Paycheck</span>
-          <span class="move-val">${fmt(move.perPaycheck)}</span>
-        </div>
-        <div class="move-progress">
-          <div class="move-bar" style="width:${Math.min(100,(move.currentBal/move.targetAmount)*100).toFixed(1)}%"></div>
-        </div>
-        <div class="move-prog-label">${fmt(move.currentBal)} of ${fmt(move.targetAmount)}</div>
+      <div class="metric">
+        <span>Shared bill split</span>
+        <strong>Daniel 59% · Sonia 41%</strong>
       </div>
-
-      <div class="dash-two-col">
-        <div>
-          <div class="section-title">Daniel</div>
-          ${renderWalletCard('daniel')}
-        </div>
-        <div>
-          <div class="section-title">Sonia</div>
-          ${renderWalletCard('sonia')}
-        </div>
+      <div class="metric">
+        <span>Total shared bills</span>
+        <strong class="private-value">$1,300/mo</strong>
       </div>
-
-      <div class="section-title">Household Income</div>
-      <div class="income-row">
-        <span>Combined Monthly Take-Home</span>
-        <strong>${fmt(totalIncome)}</strong>
+      <div class="metric">
+        <span>Daniel share</span>
+        <strong class="private-value">$768/mo</strong>
       </div>
-    </div>
-  `;
+      <div class="metric">
+        <span>Sonia share</span>
+        <strong class="private-value">$534/mo</strong>
+      </div>
+      <div class="metric">
+        <span>Move fund target</span>
+        <strong class="private-value">$1,950 by July 10</strong>
+      </div>
+    `, 'span-6')}
+
+    ${card('Live Progress Trackers', `
+      ${tracker('daniel-move-fund',  'Daniel — Move Fund',         0,       1950)}
+      ${tracker('daniel-visa-paid',  'Daniel — Visa Paid Down',    0,       9315.95)}
+      ${tracker('sonia-savings',     'Sonia — Apple Savings',      900,     2500)}
+      ${tracker('sonia-family-paid', 'Sonia — Family Debt Paid',   0,       10000)}
+      ${tracker('sonia-nw-paid',     'Sonia — Northwest Loan Paid',0,       2266.02)}
+    `, 'span-6')}
+
+    ${card('Operating Rule', proTip(
+      'No discretionary spending happens until bills, debt payments, and savings are assigned for the pay cycle. ' +
+      'Every paycheck gets a job <em>before</em> it hits the account.'
+    ), 'span-12')}
+
+  </div>`;
 }
 
-function renderWalletCard(person) {
-  const checking = walletGet(person, 'checking');
-  const savings  = walletGet(person, 'savings');
-  return `
-    <div class="wallet-card">
-      <div class="wallet-row">
-        <label>Checking</label>
-        <input type="number" class="wallet-input" data-wallet-person="${person}" data-wallet-type="checking"
-               value="${checking}" placeholder="0.00" />
-      </div>
-      <div class="wallet-row">
-        <label>Savings</label>
-        <input type="number" class="wallet-input" data-wallet-person="${person}" data-wallet-type="savings"
-               value="${savings}" placeholder="0.00" />
-      </div>
-      <div class="wallet-total">Total: <strong>${fmt(checking + savings)}</strong></div>
-    </div>
-  `;
+function renderDaniel() {
+  const D = DATA.daniel;
+
+  const paychecks = D.paychecks.map(r => [r[0], `<strong class="private-value">${r[1]}</strong>`, r[2]]);
+  const budget    = D.budget.map(([a, b]) => [a, priv(b)]);
+
+  $('#daniel').innerHTML = `<div class="grid">
+
+    ${card('Daniel', `
+      <p>
+        <span class="pill">${D.payFrequency}</span>
+        <span class="pill warn">NFCU Visa priority</span>
+        <span class="pill good">Move target: $1,950</span>
+      </p>
+      <p>Primary rule: keep NFCU Visa at zero new charges and build the move fund to $1,950 by July 10.
+      Protect the EasyStart Certificate — do not touch before December 2026.</p>
+      ${notice('EasyStart Certificate: <strong class="private-value">$2,137.75</strong> — matures 12/06/2026. Do not withdraw early.')}
+    `, 'span-12')}
+
+    ${card('Paycheck Allocation: June 5 – July 10',
+      table(['Date', 'Income', 'Allocation'], paychecks, { caption: 'Daniel paycheck allocation June through July', label: 'Daniel paycheck allocation' }),
+    'span-12')}
+
+    ${card('June–July Checklist', checklist('daniel', D.checklist), 'span-6')}
+
+    ${card('Debt Snapshot',
+      table(['Debt', 'Balance', 'APR', 'Payment'], debtRows(D), { caption: 'Daniel debt snapshot', label: 'Daniel debts' }),
+    'span-6')}
+
+    ${card('Post-Move Monthly Budget',
+      table(['Category', 'Amount'], budget, { caption: 'Daniel post-move budget', label: 'Daniel monthly budget' }),
+    'span-6')}
+
+    ${card('Visa Payoff Scenarios',
+      table(['Scenario', 'Monthly Pmt', 'Timeline'], D.visaTimeline, { caption: 'Visa payoff scenarios', label: 'Visa payoff options' }),
+    'span-6')}
+
+  </div>`;
 }
 
-// ── Person Tab ───────────────────────────────────────────────
-function renderPerson(person) {
-  const name = DATA.names[person];
-  const subTabs = ['wallet', 'debt', 'spending', 'paychecks', 'budget', 'checklist'];
-  const stored = localStorage.getItem('subtab:' + person) || 'wallet';
+function renderSonia() {
+  const S = DATA.sonia;
 
-  return `
-    <div class="person-tab">
-      <header class="person-header">
-        <h2>${name}</h2>
-      </header>
-      <div class="sub-tab-bar">
-        ${subTabs.map(s => `
-          <button class="sub-btn ${stored === s ? 'active' : ''}"
-                  onclick="setSubTab('${person}','${s}')">${capitalize(s)}</button>
-        `).join('')}
-      </div>
-      <div class="sub-body">
-        ${renderSubTab(person, stored)}
-      </div>
-    </div>
-  `;
+  const nextPay  = S.nextPaycheck.map(([a, b]) => [a, `<strong class="private-value">${b}</strong>`]);
+  const budget   = S.budget.map(([a, b]) => [a, priv(b)]);
+  const savings  = S.savingsTargets.map(([a, b]) => [a, priv(b)]);
+
+  $('#sonia').innerHTML = `<div class="grid">
+
+    ${card('Sonia', `
+      <p>
+        <span class="pill">${S.payFrequency}</span>
+        <span class="pill good">Savings first</span>
+        <span class="pill warn">NW Loan 12.50% APR</span>
+      </p>
+      <p>Primary rule: zero overdrafts, reach $1,000 emergency savings immediately,
+      then grow to $2,500 by month 6. Northwest loan is $2,266.02 at 12.50% APR —
+      consider extra payments after savings target is met.</p>
+    `, 'span-12')}
+
+    ${card('Next Paycheck Allocation',
+      table(['Use', 'Amount'], nextPay, { caption: 'Sonia next paycheck allocation', label: 'Sonia paycheck' }),
+    'span-6')}
+
+    ${card('Action Checklist', checklist('sonia', S.checklist), 'span-6')}
+
+    ${card('Debt Snapshot',
+      table(['Debt', 'Balance', 'APR', 'Payment'], debtRows(S), { caption: 'Sonia debt snapshot', label: 'Sonia debts' }),
+    'span-12')}
+
+    ${card('Northwest Loan Payoff — Extra Payment Scenarios', `
+      <p class="section-note">Balance: <strong class="private-value">$2,266.02</strong> at <strong>12.50% APR</strong>.
+      Minimum: <strong class="private-value">$135.83/mo</strong>.
+      Higher payments save real money — consider accelerating after $2,500 savings goal is reached.</p>
+      ${table(['Monthly Payment', 'Payoff', 'Est. Interest'], S.loanPayoff, { caption: 'Northwest loan payoff scenarios', label: 'Northwest loan options' })}
+    `, 'span-6')}
+
+    ${card('Post-Move Monthly Budget',
+      table(['Category', 'Amount'], budget, { caption: 'Sonia post-move budget', label: 'Sonia monthly budget' }),
+    'span-6')}
+
+    ${card('Family Debt Timeline',
+      table(['Milestone', 'Remaining Balance'], S.familyDebtTimeline.map(([a, b]) => [a, `<span class="private-value">${b}</span>`]),
+        { caption: 'Sonia family debt timeline', label: 'Family debt repayment' }),
+    'span-6')}
+
+    ${card('Apple Savings Targets',
+      table(['Milestone', 'Target'], savings, { caption: 'Apple savings milestone targets', label: 'Savings milestones' }),
+    'span-6')}
+
+    ${card('Family Repayment Message', `
+      <p>Hey, I want to start paying you back consistently and make sure this is handled respectfully.
+      After the move, I'm going to start paying <strong>$200/month</strong> beginning with my first
+      post-move paycheck cycle. Starting in month three, I'll increase it to <strong>$300/month</strong>.
+      I'll keep you updated and stay consistent so there's no confusion.</p>
+      <p class="fine-print">Send as-is or in your own words. The commitment is what matters.</p>
+    `, 'span-12')}
+
+  </div>`;
 }
 
-function setSubTab(person, sub) {
-  localStorage.setItem('subtab:' + person, sub);
-  renderAll();
-}
-window.setSubTab = setSubTab;
+function renderHousehold() {
+  const H = DATA.household;
 
-function renderSubTab(person, sub) {
-  switch (sub) {
-    case 'wallet':    return renderSubWallet(person);
-    case 'debt':      return renderSubDebt(person);
-    case 'spending':  return renderSubSpending(person);
-    case 'paychecks': return renderSubPaychecks(person);
-    case 'budget':    return renderSubBudget(person);
-    case 'checklist': return renderSubChecklist(person);
-    default: return '';
-  }
-}
+  const bills = H.sharedBills.map(r => [
+    r[0],
+    priv(r[1]),
+    priv(r[2]),
+    priv(r[3]),
+  ]);
 
-// Sub: Wallet
-function renderSubWallet(person) {
-  return `
-    <div class="sub-section">
-      <div class="section-title">Wallet</div>
-      ${renderWalletCard(person)}
-    </div>
-  `;
-}
+  // Net-worth rows — highlight positive/negative final column
+  const nwRows = H.netWorth.map(r => [
+    `Mo ${r[0]}`,
+    priv(Number(r[1].replace(/[$,]/g, ''))),
+    priv(Number(r[2].replace(/[$,]/g, ''))),
+    priv(Number(r[3].replace(/[$,]/g, ''))),
+    r[4],   // NW loan — may have 'est.' suffix
+    priv(Number(r[5].replace(/[$,]/g, ''))),
+    priv(Number(r[6].replace(/[$,]/g, ''))),
+    `<span class="private-value" style="font-weight:700;color:${r[7].startsWith('-') ? 'var(--bad)' : 'var(--good)'}">${r[7]}</span>`,
+  ]);
 
-// Sub: Debt — sliders with track: as live value, startBal as max/default
-function renderSubDebt(person) {
-  const myDebts = DATA.debts.filter(d => d.owner === person || d.owner === 'joint');
-  if (!myDebts.length) return '<p class="empty">No debts assigned.</p>';
+  $('#household').innerHTML = `<div class="grid">
 
-  return `
-    <div class="sub-section">
-      <div class="section-title">Debt Tracker</div>
-      ${myDebts.map(d => renderDebtSlider(d)).join('')}
-      <div class="snapshot-title">Debt Snapshot</div>
-      <table class="snapshot-table">
-        <thead><tr><th>Account</th><th>APR</th><th>Balance</th><th>Mo. Interest</th></tr></thead>
-        <tbody>
-          ${myDebts.map(d => {
-            const bal = currentBal(d);  // uses track: with startBal fallback
-            const mi  = bal * (d.apr / 100 / 12);
-            return `<tr>
-              <td>${d.label}</td>
-              <td>${d.apr}%</td>
-              <td class="bal-cell" data-debt-id="${d.id}">${fmt(bal)}</td>
-              <td>${fmt(mi)}</td>
-            </tr>`;
-          }).join('')}
-        </tbody>
-      </table>
-    </div>
-  `;
+    ${card('Shared Bill Split',
+      table(
+        ['Bill', 'Total', 'Daniel (59%)', 'Sonia (41%)'],
+        bills,
+        { caption: 'Monthly shared bill split', label: 'Shared bills' }
+      ),
+    'span-6')}
+
+    ${card('Debt Payoff Sequence',
+      table(['Priority', 'Action', 'Reason'], H.debtSequence,
+        { caption: 'Household debt payoff sequence', label: 'Payoff sequence' }),
+    'span-6')}
+
+    ${card('Net Worth Trajectory (Months 1–36)', `
+      <p class="section-note">Projected combined net worth assuming plan is followed. Negative values in red.</p>
+      ${table(
+        ['Month', 'Visa', 'Vehicle', 'Family Debt', 'NW Loan', 'Cash', 'Investments', 'Net Worth'],
+        nwRows,
+        { caption: 'Projected net worth trajectory', label: 'Net worth projection' }
+      )}
+    `, 'span-12')}
+
+  </div>`;
 }
 
-function renderDebtSlider(debt) {
-  const live = trackGet(debt.id);
-  const current = live !== null ? live : debt.startBal;
-  const max = debt.startBal;
-  const pct = max > 0 ? (((max - current) / max) * 100).toFixed(1) : 0;
-
-  return `
-    <div class="slider-block" data-si="${debt.id}" data-si-max="${max}" data-si-type="debt">
-      <div class="slider-top">
-        <span class="slider-label">${debt.label}</span>
-        <span class="slider-pct" data-si-pct="${debt.id}">${pct}% paid</span>
-      </div>
-      <div class="slider-track">
-        <div class="slider-fill debt-fill" data-si-fill="${debt.id}"
-             style="width:${pct}%"></div>
-        <input type="range" class="slider-range"
-               data-si-range="${debt.id}"
-               min="0" max="${max}" step="1"
-               value="${max - current}" />
-      </div>
-      <div class="slider-inputs">
-        <div class="si-input-group">
-          <label class="si-label">Started At</label>
-          <input type="number" class="si-input" data-si-goal="${debt.id}"
-                 value="${max}" placeholder="${max}" />
-        </div>
-        <div class="si-input-group">
-          <label class="si-label">Now</label>
-          <input type="number" class="si-input" data-si-now="${debt.id}"
-                 value="${current}" placeholder="${current}" />
-        </div>
-      </div>
-      <div class="slider-meta">${fmt(current)} remaining — ${fmt(max - current)} paid</div>
-    </div>
-  `;
-}
-
-// Sub: Spending
-function renderSubSpending(person) {
-  const caps = DATA.spendCaps[person];
-  const cats = Object.keys(caps);
-  return `
-    <div class="sub-section">
-      <div class="section-title">Monthly Spending Caps</div>
-      <table class="snapshot-table">
-        <thead><tr><th>Category</th><th>Cap</th><th>Spent</th><th>Left</th></tr></thead>
-        <tbody>
-          ${cats.map(cat => {
-            const cap = caps[cat];
-            const spent = parseFloat(localStorage.getItem('spend:' + person + ':' + cat) || '0');
-            const left = Math.max(0, cap - spent);
-            return `<tr>
-              <td>${capitalize(cat)}</td>
-              <td>${fmt(cap)}</td>
-              <td><input type="number" class="inline-input" data-spend="${person}:${cat}"
-                         value="${spent}" placeholder="0" /></td>
-              <td class="${left < cap * 0.2 ? 'red-text' : ''}">${fmt(left)}</td>
-            </tr>`;
-          }).join('')}
-        </tbody>
-      </table>
-    </div>
-  `;
-}
-
-// Sub: Paychecks
-function renderSubPaychecks(person) {
-  const inc  = DATA.income[person];
-  const freq = inc.payFreq === 'biweekly' ? 'Biweekly' : 'Weekly';
-  const perCheck = inc.payFreq === 'biweekly' ? inc.monthly / 2 : inc.monthly / 4;
-  return `
-    <div class="sub-section">
-      <div class="section-title">Paychecks</div>
-      <div class="paycheck-row">
-        <span>Monthly Take-Home</span><strong>${fmt(inc.monthly)}</strong>
-      </div>
-      <div class="paycheck-row">
-        <span>Frequency</span><strong>${freq}</strong>
-      </div>
-      <div class="paycheck-row">
-        <span>Per Paycheck (est.)</span><strong>${fmt(perCheck)}</strong>
-      </div>
-    </div>
-  `;
-}
-
-// Sub: Budget
-function renderSubBudget(person) {
-  const inc   = DATA.income[person];
-  const split = DATA.split[person];
-  const caps  = DATA.spendCaps[person];
-  const totalCaps = Object.values(caps).reduce((a, b) => a + b, 0);
-  const debtAmt   = DATA.debts.filter(d => d.owner === person || d.owner === 'joint')
-                              .reduce((sum, d) => sum + currentBal(d) * (d.apr / 100 / 12), 0);
-  return `
-    <div class="sub-section">
-      <div class="section-title">Budget Overview</div>
-      <div class="budget-row">
-        <span>Monthly Income</span><strong class="green-text">${fmt(inc.monthly)}</strong>
-      </div>
-      <div class="budget-row">
-        <span>Spending Caps Total</span><strong>${fmt(totalCaps)}</strong>
-      </div>
-      <div class="budget-row">
-        <span>Est. Monthly Debt Interest</span><strong class="red-text">${fmt(debtAmt)}</strong>
-      </div>
-      <div class="budget-row">
-        <span>Household Split</span><strong>${split}%</strong>
-      </div>
-      <div class="budget-row highlight">
-        <span>Remaining (est.)</span>
-        <strong>${fmt(inc.monthly - totalCaps - debtAmt)}</strong>
-      </div>
-    </div>
-  `;
-}
-
-// Sub: Checklist
-function renderSubChecklist(person) {
-  const items = JSON.parse(localStorage.getItem('checklist:' + person) || '[]');
-  return `
-    <div class="sub-section">
-      <div class="section-title">Monthly Checklist</div>
-      <div class="checklist-add">
-        <input id="cl-input-${person}" type="text" placeholder="Add item..." class="cl-text-input" />
-        <button class="btn-sm" onclick="addChecklistItem('${person}')">Add</button>
-      </div>
-      <ul class="checklist">
-        ${items.map((item, i) => `
-          <li class="cl-item ${item.done ? 'done' : ''}">
-            <input type="checkbox" ${item.done ? 'checked' : ''}
-                   onchange="toggleChecklist('${person}', ${i})" />
-            <span>${item.text}</span>
-            <button class="cl-del" onclick="deleteChecklist('${person}', ${i})">×</button>
-          </li>
-        `).join('')}
-      </ul>
-    </div>
-  `;
-}
-
-function addChecklistItem(person) {
-  const input = document.getElementById('cl-input-' + person);
-  if (!input || !input.value.trim()) return;
-  const items = JSON.parse(localStorage.getItem('checklist:' + person) || '[]');
-  items.push({ text: input.value.trim(), done: false });
-  localStorage.setItem('checklist:' + person, JSON.stringify(items));
-  renderAll();
-}
-window.addChecklistItem = addChecklistItem;
-
-function toggleChecklist(person, i) {
-  const items = JSON.parse(localStorage.getItem('checklist:' + person) || '[]');
-  if (items[i]) items[i].done = !items[i].done;
-  localStorage.setItem('checklist:' + person, JSON.stringify(items));
-  renderAll();
-}
-window.toggleChecklist = toggleChecklist;
-
-function deleteChecklist(person, i) {
-  const items = JSON.parse(localStorage.getItem('checklist:' + person) || '[]');
-  items.splice(i, 1);
-  localStorage.setItem('checklist:' + person, JSON.stringify(items));
-  renderAll();
-}
-window.deleteChecklist = deleteChecklist;
-
-// ── Savings Sliders (within person sub-tabs) ─────────────────
-function renderSavingsSlider(sav) {
-  const live    = trackGet(sav.id);
-  const current = live !== null ? live : 0;
-  const max     = sav.goalBal;
-  const pct     = max > 0 ? ((current / max) * 100).toFixed(1) : 0;
-
-  return `
-    <div class="slider-block" data-si="${sav.id}" data-si-max="${max}" data-si-type="savings">
-      <div class="slider-top">
-        <span class="slider-label">${sav.label}</span>
-        <span class="slider-pct" data-si-pct="${sav.id}">${pct}%</span>
-      </div>
-      <div class="slider-track">
-        <div class="slider-fill savings-fill" data-si-fill="${sav.id}"
-             style="width:${pct}%"></div>
-        <input type="range" class="slider-range"
-               data-si-range="${sav.id}"
-               min="0" max="${max}" step="1"
-               value="${current}" />
-      </div>
-      <div class="slider-inputs">
-        <div class="si-input-group">
-          <label class="si-label">Goal</label>
-          <input type="number" class="si-input" data-si-goal="${sav.id}"
-                 value="${max}" placeholder="${max}" />
-        </div>
-        <div class="si-input-group">
-          <label class="si-label">Now</label>
-          <input type="number" class="si-input" data-si-now="${sav.id}"
-                 value="${current}" placeholder="0" />
-        </div>
-      </div>
-      <div class="slider-meta">${fmt(current)} of ${fmt(max)}</div>
-    </div>
-  `;
-}
-
-// ── Roadmap ──────────────────────────────────────────────────
-// FIX #3: Milestones read from track: not walletGet()
-function renderRoadmap() {
-  const milestones = [
-    {
-      label:    'Daniel — Emergency Fund $1K',
-      check:    () => (trackGet('d-emer') || 0) >= 1000,
-      target:   fmt(1000),
-      current:  fmt(trackGet('d-emer') || 0),
-    },
-    {
-      label:    'Move Fund Funded',
-      check:    () => (trackGet('d-move') || 0) >= DATA.moveFund.targetAmount,
-      target:   fmt(DATA.moveFund.targetAmount),
-      current:  fmt(trackGet('d-move') || 0),
-    },
-    {
-      label:    'Sonia — Savings $2,500',
-      check:    () => (trackGet('s-svng') || 0) >= 2500,
-      target:   fmt(2500),
-      current:  fmt(trackGet('s-svng') || 0),
-    },
-    {
-      label:    'NW Loan Paid Off',
-      check:    () => (trackGet('d-nwln') !== null ? trackGet('d-nwln') : DATA.debts.find(d => d.id === 'd-nwln').startBal) <= 0,
-      target:   '$0',
-      current:  fmt(currentBal(DATA.debts.find(d => d.id === 'd-nwln'))),
-    },
-    {
-      label:    'Sonia — Emergency Fund $3K',
-      check:    () => (trackGet('s-emer') || 0) >= 3000,
-      target:   fmt(3000),
-      current:  fmt(trackGet('s-emer') || 0),
-    },
-    {
-      label:    'Daniel — Visa Paid Off',
-      check:    () => (trackGet('d-visa') !== null ? trackGet('d-visa') : DATA.debts.find(d => d.id === 'd-visa').startBal) <= 0,
-      target:   '$0',
-      current:  fmt(currentBal(DATA.debts.find(d => d.id === 'd-visa'))),
-    },
+function renderReview() {
+  const reviewItems = [
+    'Overdrafts are $0.',
+    'Daniel NFCU Visa has $0 new charges.',
+    'Daniel Visa balance fell each month.',
+    'Sonia family debt payment made every month.',
+    'Sonia Northwest loan current or accelerated.',
+    'Emergency savings increased.',
+    'Shared bills split correctly at 59/41.',
+    'Subscriptions did not creep back.',
+    'Fast food, beauty, and Amazon stayed under cap.',
+    'Net worth improved quarter over quarter.',
+    'Move-related final bills are closed out.',
+    'Investing only started after trigger list is satisfied.',
   ];
 
-  return `
-    <div class="roadmap">
-      <div class="section-title">Financial Roadmap</div>
-      <div class="roadmap-list">
-        ${milestones.map((m, i) => `
-          <div class="milestone ${m.check() ? 'done' : ''}">
-            <div class="ms-check">${m.check() ? '✓' : (i + 1)}</div>
-            <div class="ms-body">
-              <div class="ms-label">${m.label}</div>
-              <div class="ms-progress">${m.current} / ${m.target}</div>
-            </div>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-  `;
+  const investTriggers = [
+    ['Daniel',    'Visa paid off, $1,000+ emergency fund, no new card charges for 90 days', '$50–$150/mo'],
+    ['Sonia',     '$2,500 emergency fund, no overdrafts 90 days, family debt below $5,000, NW loan current or paid', '$50–$150/mo'],
+    ['Household', 'Both current, shared bills stable, no surprise old-address bills', 'Review quarterly'],
+  ];
+
+  const scenarios = [
+    ['Conservative', 'Daniel $600/mo to Visa; Sonia follows family plan; extra cash builds reserves', 'Safer but slower'],
+    ['Balanced ✓',   'Daniel $700/mo to Visa; Sonia saves to $2,500 and pays family debt on schedule', 'Recommended'],
+    ['Aggressive',   'Daniel $800–$900/mo to Visa; Sonia adds extra to NW loan after month 6', 'Fastest — higher cash-flow risk'],
+  ];
+
+  $('#review').innerHTML = `<div class="grid">
+
+    ${card('Quarterly Review Checklist',
+      checklist('quarterly', reviewItems),
+    'span-6')}
+
+    ${card('Investment Triggers',
+      table(['Person', 'Trigger Condition', 'Start Amount'], investTriggers,
+        { caption: 'Investment trigger conditions', label: 'Investment triggers' }),
+    'span-6')}
+
+    ${card('Scenario Options',
+      table(['Scenario', 'Action', 'Outcome'], scenarios,
+        { caption: 'Financial scenario comparison', label: 'Scenarios' }),
+    'span-12')}
+
+  </div>`;
 }
 
-// ── Settings ─────────────────────────────────────────────────
-// FIX #6: No debt/savings amount fields — only spending caps, income, APRs, split
-// FIX #7: Balance Log = one-button snapshot, no re-entry
 function renderSettings() {
-  return `
-    <div class="settings">
-      <div class="section-title">Settings</div>
+  $('#settings').innerHTML = `<div class="grid">
 
-      <div class="settings-section">
-        <div class="settings-subhead">Debt APRs</div>
-        ${DATA.debts.map(d => `
-          <div class="settings-row">
-            <label>${d.label}</label>
-            <input type="number" step="0.01" class="settings-input"
-                   data-setting-apr="${d.id}" value="${d.apr}" />
-            <span class="settings-unit">%</span>
-          </div>
-        `).join('')}
-      </div>
+    ${card('Security & Privacy', `
+      ${notice('The passcode is client-side only — it protects against casual viewing, not a determined attacker. Do not store bank logins, full account numbers, SSNs, or sensitive documents in this app. Use a private GitHub repository.')}
+      <p>Progress data (checklist states and tracker values) is saved to this device's <code>localStorage</code> only. Nothing is sent to any server.</p>
+    `, 'span-12')}
 
-      <div class="settings-section">
-        <div class="settings-subhead">Monthly Income</div>
-        ${DATA.people.map(p => `
-          <div class="settings-row">
-            <label>${DATA.names[p]}</label>
-            <input type="number" class="settings-input"
-                   data-setting-income="${p}" value="${DATA.income[p].monthly}" />
-          </div>
-        `).join('')}
+    ${card('Export Progress', `
+      <p class="section-note">Download your saved checklist and tracker data as a JSON file or CSV for your records.</p>
+      <div class="btn-group">
+        <button id="exportJsonBtn" class="btn-primary">Export JSON</button>
+        <button id="exportCsvBtn"  class="btn-secondary">Export CSV</button>
       </div>
+      <pre id="exportOut" class="callout" aria-live="polite" style="margin-top:12px;display:none"></pre>
+    `, 'span-6')}
 
-      <div class="settings-section">
-        <div class="settings-subhead">Household Split</div>
-        ${DATA.people.map(p => `
-          <div class="settings-row">
-            <label>${DATA.names[p]}</label>
-            <input type="number" class="settings-input"
-                   data-setting-split="${p}" value="${DATA.split[p]}" />
-            <span class="settings-unit">%</span>
-          </div>
-        `).join('')}
+    ${card('Import Progress', `
+      <p class="section-note">Restore a previously exported JSON file to pick up where you left off on another device.</p>
+      <div class="field-group" style="margin-top:8px">
+        <label for="importFile">Select JSON export file</label>
+        <input type="file" id="importFile" accept=".json,application/json" aria-describedby="importHelp" />
       </div>
+      <p id="importHelp" class="fine-print">Only files exported from this app are supported. Your current data will be replaced.</p>
+      <button id="importBtn" class="btn-primary" style="margin-top:8px">Import & Restore</button>
+      <p id="importStatus" role="alert" aria-live="assertive" style="margin-top:8px;font-size:.875rem"></p>
+    `, 'span-6')}
 
-      <div class="settings-section">
-        <div class="settings-subhead">Spending Caps — Daniel</div>
-        ${Object.keys(DATA.spendCaps.daniel).map(cat => `
-          <div class="settings-row">
-            <label>${capitalize(cat)}</label>
-            <input type="number" class="settings-input"
-                   data-setting-cap="daniel:${cat}" value="${DATA.spendCaps.daniel[cat]}" />
-          </div>
-        `).join('')}
-      </div>
+    ${card('Data Reset', `
+      <p class="section-note">Permanently clear all saved checklist states and tracker values from this device.</p>
+      <button id="resetBtn2" class="btn-danger" style="margin-top:8px">Reset All Progress</button>
+    `, 'span-12')}
 
-      <div class="settings-section">
-        <div class="settings-subhead">Spending Caps — Sonia</div>
-        ${Object.keys(DATA.spendCaps.sonia).map(cat => `
-          <div class="settings-row">
-            <label>${capitalize(cat)}</label>
-            <input type="number" class="settings-input"
-                   data-setting-cap="sonia:${cat}" value="${DATA.spendCaps.sonia[cat]}" />
-          </div>
-        `).join('')}
-      </div>
+  </div>`;
 
-      <div class="settings-section">
-        <div class="settings-subhead">Balance Log</div>
-        <p class="settings-note">Snapshots current slider positions into a dated log entry. No re-entry needed.</p>
-        <button class="btn-primary" onclick="snapshotBalanceLog()">Snapshot Now</button>
-        <div class="balance-log">
-          ${renderBalanceLog()}
-        </div>
-      </div>
+  /* ── Export JSON ── */
+  $('#exportJsonBtn').addEventListener('click', () => {
+    const out = {};
+    LS.keys('checks:').forEach(k => { out[k] = LS.get(k); });
+    LS.keys('tracker:').forEach(k => { out[k] = LS.get(k); });
+    out['lastUpdated'] = LS.get('lastUpdated');
+    const json = JSON.stringify(out, null, 2);
+    downloadFile(`garner-johnson-progress-${datestamp()}.json`, json, 'application/json');
+    const pre = $('#exportOut');
+    pre.textContent = json;
+    pre.style.display = 'block';
+  });
 
-      <div class="settings-section danger-zone">
-        <div class="settings-subhead">Session</div>
-        <button class="btn-danger" onclick="lock()">Lock App</button>
-        <button class="btn-danger" onclick="clearAllData()">Clear All Data</button>
-      </div>
-    </div>
-  `;
+  /* ── Export CSV ── */
+  $('#exportCsvBtn').addEventListener('click', () => {
+    const rows = [['Key', 'Value', 'ExportedAt']];
+    const now = new Date().toISOString();
+    LS.keys('checks:').forEach(k => rows.push([k, JSON.stringify(LS.get(k)), now]));
+    LS.keys('tracker:').forEach(k => rows.push([k, LS.get(k), now]));
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    downloadFile(`garner-johnson-progress-${datestamp()}.csv`, csv, 'text/csv');
+  });
+
+  /* ── Import JSON ── */
+  $('#importBtn').addEventListener('click', () => {
+    const file = $('#importFile').files[0];
+    const status = $('#importStatus');
+    if (!file) { status.textContent = '⚠️ Please select a JSON file first.'; status.style.color = 'var(--warn)'; return; }
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const imported = JSON.parse(e.target.result);
+        let count = 0;
+        Object.entries(imported).forEach(([k, v]) => {
+          if (k.startsWith('checks:') || k.startsWith('tracker:') || k === 'lastUpdated') {
+            LS.set(k, v);
+            count++;
+          }
+        });
+        status.textContent = `✅ Imported ${count} items. Reloading…`;
+        status.style.color = 'var(--good)';
+        setTimeout(() => location.reload(), 1200);
+      } catch {
+        status.textContent = '❌ Invalid file — make sure it is a JSON exported from this app.';
+        status.style.color = 'var(--bad)';
+      }
+    };
+    reader.readAsText(file);
+  });
+
+  /* ── Reset (second button in settings) ── */
+  $('#resetBtn2').addEventListener('click', () => {
+    if (!confirm('This will permanently clear all saved progress on this device. Continue?')) return;
+    [...LS.keys('checks:'), ...LS.keys('tracker:')].forEach(k => LS.remove(k));
+    LS.remove('lastUpdated');
+    location.reload();
+  });
 }
 
-function snapshotBalanceLog() {
-  const log = JSON.parse(localStorage.getItem('balanceLog') || '[]');
-  const entry = {
-    date: new Date().toLocaleDateString(),
-    debts: DATA.debts.reduce((acc, d) => { acc[d.id] = currentBal(d); return acc; }, {}),
-    savings: DATA.savings.reduce((acc, s) => { acc[s.id] = trackGet(s.id) || 0; return acc; }, {}),
-    wallets: {
-      daniel: { checking: walletGet('daniel', 'checking'), savings: walletGet('daniel', 'savings') },
-      sonia:  { checking: walletGet('sonia',  'checking'), savings: walletGet('sonia',  'savings') },
-    },
-  };
-  log.unshift(entry);
-  if (log.length > 24) log.splice(24); // keep last 24
-  localStorage.setItem('balanceLog', JSON.stringify(log));
-  renderAll();
-}
-window.snapshotBalanceLog = snapshotBalanceLog;
-
-function renderBalanceLog() {
-  const log = JSON.parse(localStorage.getItem('balanceLog') || '[]');
-  if (!log.length) return '<p class="empty">No snapshots yet.</p>';
-  return log.slice(0, 5).map(entry => `
-    <div class="log-entry">
-      <strong>${entry.date}</strong>
-      <div class="log-debts">
-        ${DATA.debts.map(d => `<span>${d.label}: ${fmt(entry.debts[d.id] || 0)}</span>`).join('')}
-      </div>
-    </div>
-  `).join('');
+/* ─── Utility helpers ─────────────────────────────────── */
+function datestamp() {
+  return new Date().toISOString().slice(0, 10);
 }
 
-function clearAllData() {
-  if (!confirm('Clear all tracking data? This cannot be undone.')) return;
-  const keys = Object.keys(localStorage).filter(k =>
-    k.startsWith('track:') || k.startsWith('wallet:') || k.startsWith('spend:') ||
-    k.startsWith('checklist:') || k === 'balanceLog'
-  );
-  keys.forEach(k => localStorage.removeItem(k));
-  renderAll();
+function downloadFile(filename, content, mimeType) {
+  const blob = new Blob([content], { type: mimeType });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
-window.clearAllData = clearAllData;
 
-// ── Slider Event Handlers ────────────────────────────────────
-// FIX #1: data-si-goal only — no data-goal duplicate handler
+/* ─── Privacy toggle ──────────────────────────────────── */
+function initPrivacyToggle() {
+  const btn = $('#privacyBtn');
+  if (!btn) return;
+  const on = LS.get('privacyMode', false);
+  applyPrivacy(on, btn);
 
-function handleSliderInput(e) {
-  const el = e.target;
+  btn.addEventListener('click', () => {
+    const next = !document.body.classList.contains('privacy-mode');
+    LS.set('privacyMode', next);
+    applyPrivacy(next, btn);
+  });
+}
 
-  // Range drag
-  if (el.matches('[data-si-range]')) {
-    const id   = el.dataset.siRange;
-    const block = el.closest('[data-si]');
-    if (!block) return;
-    const type = block.dataset.siType;
-    const max  = parseFloat(block.dataset.siMax);
+function applyPrivacy(on, btn) {
+  document.body.classList.toggle('privacy-mode', on);
+  btn.setAttribute('aria-pressed', String(on));
+  const label = btn.querySelector('.btn-label');
+  if (label) label.textContent = on ? 'Show $' : 'Hide $';
+}
 
-    let current;
-    if (type === 'debt') {
-      // range value = amount paid; current = max - paid
-      const paid = parseFloat(el.value);
-      current = max - paid;
-    } else {
-      current = parseFloat(el.value);
-    }
+/* ─── Tab navigation ──────────────────────────────────── */
+function initTabs() {
+  const tabs   = $$('.tab');
+  const panels = $$('.panel');
 
-    localStorage.setItem('track:' + id, current);
-    updateSliderUI(id, current, max, type);
-    updateSnapshotCell(id, current);
-  }
+  function activate(tab) {
+    tabs.forEach(t => {
+      t.classList.remove('active');
+      t.setAttribute('aria-selected', 'false');
+    });
+    panels.forEach(p => p.classList.remove('active'));
 
-  // Now input
-  if (el.matches('[data-si-now]')) {
-    const id    = el.dataset.siNow;
-    const block = el.closest('[data-si]');
-    if (!block) return;
-    const type = block.dataset.siType;
-    const max  = parseFloat(block.dataset.siMax);
-    const current = parseFloat(el.value) || 0;
-
-    localStorage.setItem('track:' + id, current);
-    updateSliderUI(id, current, max, type);
-
-    // Also update the range input position
-    const range = block.querySelector('[data-si-range]');
-    if (range) {
-      range.value = type === 'debt' ? max - current : current;
-    }
-    updateSnapshotCell(id, current);
-  }
-
-  // Wallet input
-  if (el.matches('[data-wallet-person]')) {
-    const person = el.dataset.walletPerson;
-    const type   = el.dataset.walletType;
-    walletSet(person, type, parseFloat(el.value) || 0);
-    // Update totals in the same wallet card without full re-render
-    const card = el.closest('.wallet-card');
-    if (card) {
-      const total = walletGet(person, 'checking') + walletGet(person, 'savings');
-      const t = card.querySelector('.wallet-total strong');
-      if (t) t.textContent = fmt(total);
+    tab.classList.add('active');
+    tab.setAttribute('aria-selected', 'true');
+    const target = $(`#${tab.dataset.target}`);
+    if (target) {
+      target.classList.add('active');
+      // Don't steal focus on initial load
     }
   }
 
-  // Spend input
-  if (el.matches('[data-spend]')) {
-    const [person, cat] = el.dataset.spend.split(':');
-    localStorage.setItem('spend:' + person + ':' + cat, parseFloat(el.value) || 0);
-    // Update the "Left" cell in the same row
-    const row = el.closest('tr');
-    if (row) {
-      const cap   = DATA.spendCaps[person][cat];
-      const spent = parseFloat(el.value) || 0;
-      const left  = Math.max(0, cap - spent);
-      const leftCell = row.querySelector('td:last-child');
-      if (leftCell) {
-        leftCell.textContent = fmt(left);
-        leftCell.className   = left < cap * 0.2 ? 'red-text' : '';
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => activate(tab));
+
+    // Arrow key navigation within tab list
+    tab.addEventListener('keydown', e => {
+      const idx  = tabs.indexOf(tab);
+      if (e.key === 'ArrowRight') { e.preventDefault(); tabs[(idx + 1) % tabs.length].focus(); }
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); tabs[(idx - 1 + tabs.length) % tabs.length].focus(); }
+      if (e.key === 'Home')       { e.preventDefault(); tabs[0].focus(); }
+      if (e.key === 'End')        { e.preventDefault(); tabs[tabs.length - 1].focus(); }
+    });
+  });
+}
+
+/* ─── Global event delegation ─────────────────────────── */
+function initEvents() {
+  /* Checkbox checklists */
+  document.addEventListener('change', e => {
+    if (e.target.matches('input[type="checkbox"][data-list]')) {
+      const { list, index } = e.target.dataset;
+      const saved = LS.get(`checks:${list}`, {});
+      saved[index] = e.target.checked;
+      LS.set(`checks:${list}`, saved);
+      e.target.closest('.check-row').classList.toggle('done', e.target.checked);
+      touchLastUpdated();
+
+      // Update summary counter
+      const allBoxes = $$(`input[data-list="${list}"]`);
+      const doneCount = allBoxes.filter(b => b.checked).length;
+      const summary = $(`#${list}-summary`);
+      if (summary) summary.textContent = `${doneCount} of ${allBoxes.length} complete`;
+    }
+
+    /* Tracker numeric inputs */
+    if (e.target.matches('input[data-tracker-input]')) {
+      const id = e.target.dataset.trackerInput;
+      const val = parseFloat(e.target.value);
+      if (!isNaN(val) && val >= 0) {
+        LS.set(`tracker:${id}`, val);
+        touchLastUpdated();
+        // Re-render dashboard trackers live (only if dashboard is visible)
+        if ($('#dashboard').classList.contains('active')) {
+          renderDashboard();
+        }
       }
     }
-  }
+  });
+
+  /* Print */
+  $('#printBtn').addEventListener('click', () => window.print());
+
+  /* Reset (header button) */
+  $('#resetBtn').addEventListener('click', () => {
+    if (!confirm('Clear all saved checklist and tracker data on this device?')) return;
+    [...LS.keys('checks:'), ...LS.keys('tracker:')].forEach(k => LS.remove(k));
+    LS.remove('lastUpdated');
+    location.reload();
+  });
 }
 
-function handleSliderChange(e) {
-  const el = e.target;
-
-  // FIX #1: data-si-goal only — single handler, no data-goal
-  if (el.matches('[data-si-goal]')) {
-    const id    = el.dataset.siGoal;
-    const block = el.closest('[data-si]');
-    if (!block) return;
-
-    const newMax = parseFloat(el.value) || 0;
-    block.dataset.siMax = newMax;
-
-    // Update the range input max
-    const range = block.querySelector('[data-si-range]');
-    if (range) range.max = newMax;
-
-    const type    = block.dataset.siType;
-    const current = trackGet(id) !== null ? trackGet(id) : (type === 'debt' ? newMax : 0);
-    updateSliderUI(id, current, newMax, type);
-  }
-
-  // Settings inputs (APR, income, split, caps)
-  if (el.matches('[data-setting-apr]')) {
-    const id = el.dataset.settingApr;
-    const d  = DATA.debts.find(x => x.id === id);
-    if (d) d.apr = parseFloat(el.value) || d.apr;
-  }
-  if (el.matches('[data-setting-income]')) {
-    const p = el.dataset.settingIncome;
-    DATA.income[p].monthly = parseFloat(el.value) || DATA.income[p].monthly;
-  }
-  if (el.matches('[data-setting-split]')) {
-    const p = el.dataset.settingSplit;
-    DATA.split[p] = parseFloat(el.value) || DATA.split[p];
-  }
-  if (el.matches('[data-setting-cap]')) {
-    const [person, cat] = el.dataset.settingCap.split(':');
-    DATA.spendCaps[person][cat] = parseFloat(el.value) || DATA.spendCaps[person][cat];
-  }
+/* ─── Init ────────────────────────────────────────────── */
+function init() {
+  auth();
+  renderDashboard();
+  renderDaniel();
+  renderSonia();
+  renderHousehold();
+  renderReview();
+  renderSettings();
+  initTabs();
+  initEvents();
+  initPrivacyToggle();
+  refreshLastUpdated();
 }
 
-// Update slider UI without re-render
-function updateSliderUI(id, current, max, type) {
-  const pct = max > 0
-    ? type === 'debt'
-      ? (((max - current) / max) * 100).toFixed(1)
-      : ((current / max) * 100).toFixed(1)
-    : 0;
-
-  const fill = document.querySelector(`[data-si-fill="${id}"]`);
-  const pctEl = document.querySelector(`[data-si-pct="${id}"]`);
-  const meta  = document.querySelector(`[data-si="${id}"] .slider-meta`);
-  const nowEl = document.querySelector(`[data-si-now="${id}"]`);
-
-  if (fill)  fill.style.width = pct + '%';
-  if (pctEl) pctEl.textContent = type === 'debt' ? pct + '% paid' : pct + '%';
-  if (nowEl && parseFloat(nowEl.value) !== current) nowEl.value = current;
-
-  if (meta) {
-    if (type === 'debt') {
-      meta.textContent = `${fmt(current)} remaining — ${fmt(max - current)} paid`;
-    } else {
-      meta.textContent = `${fmt(current)} of ${fmt(max)}`;
-    }
-  }
-}
-
-// Update snapshot table cell without re-render
-function updateSnapshotCell(id, current) {
-  const cell = document.querySelector(`.bal-cell[data-debt-id="${id}"]`);
-  if (cell) cell.textContent = fmt(current);
-}
-
-// ── Bind post-render events ───────────────────────────────────
-function bindBodyEvents() {
-  // Jasper unlock — button click
-  const btn = document.getElementById('jasperBtn');
-  if (btn) btn.addEventListener('click', attemptUnlock);
-
-  // Jasper unlock — Enter key
-  const ji = document.getElementById('jasperInput');
-  if (ji) {
-    ji.addEventListener('keydown', e => {
-      if (e.key === 'Enter') attemptUnlock();
-    });
-    ji.focus();
-  }
-}
-
-// ── Utilities ────────────────────────────────────────────────
-function fmt(n) {
-  return '$' + (parseFloat(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function capitalize(str) {
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}
+init();
