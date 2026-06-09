@@ -798,6 +798,16 @@ function updHeroStats(){
   if(burnEl)burnEl.textContent=M(t.burn)+'/mo';
   // update nw history if visible
   updNWSnippet();
+  // update savings rate bars live
+  const srBars=$$('.srrow');
+  if(srBars.length){
+    const inc=D.daniel.income+D.sonia.income;
+    const dDebt=D.daniel.debts.reduce((a,d)=>a+(LS.n('p:'+d.id,0)||d.min),0);
+    const sDebt=D.sonia.debts.reduce((a,d)=>a+(LS.n('p:'+d.id,0)||d.min),0);
+    const debtPct=Math.min(100,Math.round((dDebt+sDebt)/inc*100));
+    const srPctEl=$('.srp');
+    if(srPctEl)srPctEl.textContent=debtPct+'%';
+  }
 }
 
 /* ── Wallet builder ──────────────────────────────────────────── */
@@ -1636,8 +1646,8 @@ function initEvents(){
       // add fixed items
       $$('.paloc .parow').forEach(row=>{
         if(!row.querySelector('[data-ai]')){
-          const vEl=row.querySelector('.pav');
-          if(vEl){const m=vEl.textContent.replace(/[$,]/g,'');total+=parseFloat(m)||0;}
+          const fv=row.dataset.fixed;
+          if(fv)total+=parseFloat(fv)||0;
         }
       });
       const assigned=$('#pa-assigned'),remain=$('#pa-remain');
@@ -1715,8 +1725,8 @@ function initPrivacy(){
 function applyPM(on,btn){
   document.body.classList.toggle('pm',on);
   btn.setAttribute('aria-pressed',String(on));
-  // swap pv→private-value via class toggle
-  document.querySelectorAll('.pv').forEach(el=>el.classList.toggle('private-value',on));
+  const lbl=btn.querySelector('.blbl');
+  if(lbl)lbl.textContent=on?'Show $':'Hide $';
 }
 
 /* ── lastUpdated ─────────────────────────────────────────────── */
