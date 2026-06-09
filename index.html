@@ -1,90 +1,1753 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#111827" />
-  <meta name="description" content="Private household financial plan tracker for Garner-Johnson." />
-  <title>Garner-Johnson Financial Tracker</title>
-  <link rel="stylesheet" href="css/styles.css" />
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="theme-color" content="#070a10"/>
+<title>GJ Financial</title>
+<style>
+/* ============================================================
+   GJ Financial — Complete Dark Mode Build
+   Single file. Password: JASPER. Auth: sessionStorage.
+============================================================ */
+:root{
+  --bg:       #070a10;
+  --s1:       #0d1117;
+  --s2:       #131a26;
+  --s3:       #1a2235;
+  --border:   rgba(99,102,241,.14);
+  --bsoft:    rgba(99,102,241,.07);
+  --ink:      #e4e8f4;
+  --ink2:     #8b92b4;
+  --ink3:     #4a5070;
+  --brand:    #6366f1;
+  --brand2:   #818cf8;
+  --bdim:     rgba(99,102,241,.12);
+  --bglow:    0 0 0 3px rgba(99,102,241,.22);
+  --green:    #10b981;
+  --green2:   #34d399;
+  --gdim:     rgba(16,185,129,.12);
+  --red:      #ef4444;
+  --red2:     #f87171;
+  --rdim:     rgba(239,68,68,.12);
+  --amber:    #f59e0b;
+  --amber2:   #fbbf24;
+  --adim:     rgba(245,158,11,.12);
+  --purple:   #a855f7;
+  --t:        150ms ease;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;color-scheme:dark}
+body{font-family:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",sans-serif;
+  font-size:15px;line-height:1.55;background:var(--bg);color:var(--ink);
+  -webkit-font-smoothing:antialiased}
+body::before{content:'';display:block;height:3px;
+  background:linear-gradient(90deg,var(--brand) 0%,var(--purple) 50%,var(--green) 100%);
+  position:fixed;top:0;left:0;right:0;z-index:999}
+h1,h2,h3{line-height:1.2}
+p{margin-bottom:.65em}p:last-child{margin-bottom:0}
+:focus-visible{outline:2px solid var(--brand);outline-offset:3px;border-radius:5px}
+
+/* ── Login ── */
+#login{position:fixed;inset:0;background:var(--bg);display:grid;
+  place-items:center;padding:20px;z-index:200}
+.lcard{background:var(--s2);border:1px solid var(--border);
+  border-top:2px solid var(--brand);border-radius:18px;
+  padding:38px 28px;max-width:360px;width:100%;
+  box-shadow:0 40px 100px rgba(0,0,0,.7)}
+.lcard .ey{font-size:.68rem;text-transform:uppercase;letter-spacing:.12em;
+  color:var(--brand2);font-weight:700;margin-bottom:8px}
+.lcard h1{font-size:1.5rem;font-weight:800;margin-bottom:5px}
+.lcard p{color:var(--ink2);font-size:.875rem;margin-bottom:18px}
+.lcard .fg{display:grid;gap:5px;margin-bottom:12px}
+.lcard .fg label{font-size:.82rem;font-weight:600;color:var(--ink2)}
+.lcard input[type=password]{width:100%;padding:12px 14px;
+  background:var(--s3);border:1px solid var(--border);
+  border-radius:8px;color:var(--ink);font:inherit;font-size:1rem;
+  letter-spacing:.08em;transition:border-color var(--t),box-shadow var(--t)}
+.lcard input[type=password]:focus{border-color:var(--brand);box-shadow:var(--bglow);outline:none}
+.lerr{color:var(--red2);font-weight:700;font-size:.82rem;min-height:18px;margin-top:5px}
+.fnote{font-size:.72rem;color:var(--ink3);line-height:1.5;margin-top:12px}
+
+/* ── Buttons ── */
+.bp,.bs,.bd,.bg{display:inline-flex;align-items:center;justify-content:center;
+  gap:6px;padding:9px 18px;border:none;border-radius:8px;
+  font:600 .85rem/1 inherit;cursor:pointer;white-space:nowrap;
+  transition:filter var(--t),background var(--t),border-color var(--t)}
+.bp{background:var(--brand);color:#fff}.bp:hover{filter:brightness(1.1)}
+.bs{background:var(--s3);color:var(--ink2);border:1px solid var(--border)}
+.bs:hover{border-color:var(--brand);color:var(--ink)}
+.bd{background:var(--rdim);color:var(--red2);border:1px solid rgba(239,68,68,.25)}
+.bd:hover{background:var(--red);color:#fff}
+.bg{background:transparent;color:var(--ink2);border:1px solid var(--border)}
+.bg:hover{border-color:var(--brand);color:var(--brand2)}
+.fw{width:100%}
+.bgrp{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+
+/* ── App header ── */
+.ah{display:flex;justify-content:space-between;align-items:flex-start;
+  gap:12px;padding:20px 18px 14px;padding-top:23px;
+  background:var(--s1);border-bottom:1px solid var(--border)}
+.ah h1{font-size:clamp(1.1rem,3vw,1.45rem);font-weight:800;letter-spacing:-.02em;
+  background:linear-gradient(90deg,#fff 40%,var(--brand2) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.ey{font-size:.66rem;text-transform:uppercase;letter-spacing:.12em;
+  color:var(--brand2);font-weight:700;margin-bottom:3px}
+.sub{font-size:.8rem;color:var(--ink3);margin-top:2px}
+.ha{display:flex;gap:6px;align-items:center;flex-wrap:wrap;
+  justify-content:flex-end;flex-shrink:0}
+.lu{font-size:.7rem;color:var(--ink3);white-space:nowrap}
+
+/* ── Main tabs ── */
+.tabs{display:flex;overflow-x:auto;gap:2px;padding:8px 12px;
+  background:var(--s1);border-bottom:1px solid var(--border);
+  position:sticky;top:3px;z-index:50;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;background:transparent;color:var(--ink3);
+  border:1px solid transparent;border-radius:8px;
+  padding:8px 16px;font-size:.82rem;font-weight:600;
+  cursor:pointer;white-space:nowrap;transition:all var(--t)}
+.tab:hover{color:var(--ink2);background:var(--s2)}
+.tab.active{background:var(--bdim);color:var(--brand2);border-color:var(--border)}
+
+/* ── Panels ── */
+main{max-width:1060px;margin:0 auto;padding:18px 14px}
+.panel{display:none}.panel.active{display:block}
+
+/* ── Grid ── */
+.g{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
+.s12{grid-column:span 12}.s8{grid-column:span 8}
+.s6{grid-column:span 6}.s4{grid-column:span 4}.s3{grid-column:span 3}
+
+/* ── Cards ── */
+.card{background:var(--s1);border:1px solid var(--border);
+  border-radius:12px;padding:16px}
+.card h2{font-size:.72rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.09em;color:var(--ink3);margin-bottom:12px;
+  padding-bottom:9px;border-bottom:1px solid var(--bsoft)}
+.cin{background:var(--s2);border:1px solid var(--bsoft);
+  border-radius:9px;padding:13px;margin-bottom:9px}
+.cin:last-child{margin-bottom:0}
+
+/* ── Hero stats ── */
+.hgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:4px}
+.hstat{background:var(--s2);border:1px solid var(--border);
+  border-radius:12px;padding:16px 14px;transition:border-color var(--t)}
+.hstat:hover{border-color:var(--brand)}
+.hv{display:block;font-size:clamp(1.3rem,2.5vw,1.9rem);
+  font-weight:800;letter-spacing:-.03em;line-height:1}
+.hv.bad{color:var(--red2)}.hv.good{color:var(--green2)}.hv.brand{color:var(--brand2)}
+.hl{display:block;font-size:.65rem;text-transform:uppercase;
+  letter-spacing:.1em;color:var(--ink3);font-weight:700;margin-top:6px}
+.hsub{display:block;font-size:.72rem;color:var(--green);margin-top:2px}
+
+/* ── Metric rows ── */
+.met{display:flex;justify-content:space-between;align-items:center;
+  gap:8px;padding:8px 0;border-bottom:1px solid var(--bsoft);font-size:.875rem}
+.met:last-child{border-bottom:none}
+.met span{color:var(--ink2)}.met strong{color:var(--ink);text-align:right}
+.met strong.good{color:var(--green2)}.met strong.bad{color:var(--red2)}
+.met strong.brand{color:var(--brand2)}
+
+/* ── Pills ── */
+.pill{display:inline-block;padding:3px 9px;border-radius:999px;
+  font-size:.7rem;font-weight:700;margin:2px}
+.pill.g{background:var(--gdim);color:var(--green2)}
+.pill.w{background:var(--adim);color:var(--amber2)}
+.pill.b{background:var(--rdim);color:var(--red2)}
+.pill.m{background:var(--bdim);color:var(--brand2)}
+.pill.n{background:var(--s3);color:var(--ink3)}
+
+/* ── Progress bar ── */
+.pb{width:100%;height:6px;background:rgba(255,255,255,.05);
+  border-radius:999px;overflow:hidden}
+.pf{height:100%;border-radius:999px;
+  background:linear-gradient(90deg,var(--brand),var(--brand2));
+  transition:width .3s ease}
+.pf.gr{background:linear-gradient(90deg,var(--green),var(--green2))}
+.pf.am{background:linear-gradient(90deg,var(--amber),var(--amber2))}
+.pf.rd{background:linear-gradient(90deg,var(--red),var(--red2))}
+.pf.fl{background:linear-gradient(90deg,var(--green),var(--brand2))}
+
+/* ── Tables ── */
+.tw{width:100%;overflow-x:auto;border:1px solid var(--border);
+  border-radius:9px;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:.82rem;min-width:260px}
+th,td{text-align:left;padding:8px 11px;border-bottom:1px solid var(--bsoft);vertical-align:top}
+th{background:var(--s2);color:var(--ink3);font-size:.67rem;
+  text-transform:uppercase;letter-spacing:.07em;font-weight:700}
+tbody tr:hover td{background:rgba(255,255,255,.02)}
+tbody tr:last-child td{border-bottom:none}
+td{color:var(--ink2)}td strong{color:var(--ink)}
+
+/* ── Checklist ── */
+.cl{display:grid;gap:5px}
+.cr{display:flex;gap:9px;align-items:flex-start;padding:9px 11px;
+  border:1px solid var(--bsoft);border-radius:7px;background:var(--s2);
+  transition:background var(--t),border-color var(--t)}
+.cr:hover{border-color:var(--border)}
+.cr input[type=checkbox]{width:15px;height:15px;flex-shrink:0;
+  margin-top:2px;cursor:pointer;accent-color:var(--brand)}
+.cr label{cursor:pointer;font-size:.855rem;color:var(--ink2);line-height:1.4}
+.cr.dn{background:var(--gdim);border-color:rgba(16,185,129,.2)}
+.cr.dn label{text-decoration:line-through;color:var(--ink3)}
+.clsum{font-size:.75rem;color:var(--ink3);margin-bottom:8px}
+
+/* ── Sub-tabs ── */
+.stabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:16px;
+  padding-bottom:14px;border-bottom:1px solid var(--bsoft);
+  overflow-x:auto;scrollbar-width:none}
+.stabs::-webkit-scrollbar{display:none}
+.stab{flex-shrink:0;background:transparent;color:var(--ink3);
+  border:1px solid transparent;border-radius:8px;
+  padding:7px 13px;font-size:.78rem;font-weight:600;
+  cursor:pointer;white-space:nowrap;transition:all var(--t)}
+.stab:hover{color:var(--ink2);background:var(--s2)}
+.stab.active{background:var(--brand);color:#fff;border-color:transparent}
+
+/* ── Person header ── */
+.ph{display:flex;align-items:center;gap:9px;flex-wrap:wrap;
+  margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--bsoft)}
+.ph h2{font-size:1.35rem;font-weight:800;letter-spacing:-.02em}
+
+/* ── Sliders ── */
+.sw{background:var(--s2);border:1px solid var(--bsoft);
+  border-radius:11px;padding:15px;margin-bottom:9px;
+  transition:border-color var(--t)}
+.sw:hover{border-color:var(--border)}
+.sw:last-child{margin-bottom:0}
+.sh{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}
+.sn{font-size:.92rem;font-weight:700;color:var(--ink)}
+.sp{font-size:.72rem;font-weight:800;background:var(--bdim);
+  color:var(--brand2);padding:2px 8px;border-radius:999px}
+.sr{width:100%;margin:7px 0;accent-color:var(--brand);cursor:pointer}
+.ss{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:9px 0 11px}
+.sv{display:block;font-size:1.1rem;font-weight:800;letter-spacing:-.02em;line-height:1}
+.sv.g{color:var(--green2)}.sv.r{color:var(--red2)}.sv.b{color:var(--brand2)}
+.sl2{display:block;font-size:.64rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.07em;color:var(--ink3);margin-top:3px}
+.serow{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px}
+.selbl{display:grid;gap:3px;font-size:.72rem;font-weight:600;color:var(--ink3)}
+.seinp{font:inherit;padding:7px 9px;background:var(--s3);
+  border:1px solid var(--border);border-radius:7px;color:var(--ink);width:100%;
+  transition:border-color var(--t)}
+.seinp:focus{border-color:var(--brand);outline:none;box-shadow:var(--bglow)}
+.smeta{font-size:.72rem;color:var(--ink3);margin-top:5px}
+
+/* ── Payoff estimator output ── */
+.pest{background:var(--s3);border:1px solid var(--bsoft);
+  border-radius:9px;padding:13px;margin-top:11px}
+.prow{display:flex;justify-content:space-between;
+  font-size:.855rem;padding:5px 0;border-bottom:1px solid var(--bsoft)}
+.prow:last-child{border-bottom:none}
+.prow span{color:var(--ink2)}.prow strong{color:var(--ink)}
+.prow strong.good{color:var(--green2)}.prow strong.brand{color:var(--brand2)}
+
+/* ── Wallet ── */
+.wb{background:var(--s2);border:1px solid var(--bsoft);border-radius:10px;padding:14px}
+.wtr{display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--bsoft)}
+.wtl{font-weight:700;font-size:.85rem;color:var(--ink2)}
+.wtv{font-size:1.25rem;font-weight:800;color:var(--green2)}
+.wins{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.wlbl{display:grid;gap:3px;font-size:.72rem;font-weight:600;color:var(--ink3)}
+.winp{font:inherit;padding:7px 9px;background:var(--s3);
+  border:1px solid var(--border);border-radius:7px;color:var(--ink);width:100%;
+  transition:border-color var(--t)}
+.winp:focus{border-color:var(--green);outline:none}
+
+/* ── Spending cap ── */
+.caprow{padding:12px 0;border-bottom:1px solid var(--bsoft)}
+.caprow:last-of-type{border-bottom:none}
+.caph{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.capn{font-weight:700;font-size:.88rem}
+.caps{font-size:.75rem;font-weight:700;color:var(--green2)}
+.caps.w{color:var(--amber2)}.caps.r{color:var(--red2)}
+.capins{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:8px}
+.caplbl{display:grid;gap:3px;font-size:.72rem;font-weight:600;color:var(--ink3)}
+.capinp{font:inherit;padding:7px 9px;background:var(--s3);
+  border:1px solid var(--border);border-radius:7px;color:var(--ink);width:100%;
+  transition:border-color var(--t)}
+.capinp:focus{border-color:var(--brand);outline:none}
+
+/* ── Callouts ── */
+.tip{background:rgba(99,102,241,.07);border-left:3px solid var(--brand);
+  padding:11px 13px;border-radius:0 7px 7px 0;font-size:.855rem;
+  color:var(--ink2);margin:9px 0}
+.tip strong{display:block;color:var(--brand2);font-size:.68rem;
+  text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px}
+.warn{background:var(--adim);border-left:3px solid var(--amber);
+  padding:11px 13px;border-radius:0 7px 7px 0;font-size:.855rem;
+  color:var(--amber2);margin:9px 0}
+.warn strong{display:block;font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px}
+.ok{background:var(--gdim);border-left:3px solid var(--green);
+  padding:11px 13px;border-radius:0 7px 7px 0;font-size:.855rem;
+  color:var(--green2);margin:9px 0}
+
+/* ── Roadmap ── */
+.rmi{display:flex;align-items:center;gap:12px;
+  padding:11px 0;border-bottom:1px solid var(--bsoft)}
+.rmi:last-child{border-bottom:none}
+.rmico{font-size:1.1rem;flex-shrink:0;width:26px;text-align:center}
+.rmb{flex:1;min-width:0}
+.rml{font-size:.875rem;font-weight:700;color:var(--ink2)}
+.rml.dn{color:var(--green2);text-decoration:line-through;opacity:.7}
+.rmm{font-size:.72rem;color:var(--ink3);margin-top:2px}
+.rmr{width:80px;flex-shrink:0;text-align:right}
+.rmpct{font-size:.7rem;color:var(--ink3);margin-bottom:2px}
+
+/* ── Compound calc ── */
+.cins{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin:11px 0}
+.cins label{display:grid;gap:3px;font-size:.75rem;font-weight:600;color:var(--ink3)}
+.cins input{font:inherit;padding:8px 10px;background:var(--s3);
+  border:1px solid var(--border);border-radius:7px;color:var(--ink);width:100%}
+.cins input:focus{border-color:var(--brand);outline:none;box-shadow:var(--bglow)}
+.cres{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-top:10px}
+.cst{background:var(--s3);border:1px solid var(--bsoft);
+  border-radius:9px;padding:13px;text-align:center}
+.csv{display:block;font-size:1.2rem;font-weight:800;color:var(--green2);letter-spacing:-.02em}
+.csl{display:block;font-size:.65rem;color:var(--ink3);
+  text-transform:uppercase;letter-spacing:.07em;margin-top:3px}
+.cproj{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:9px}
+.cpj{background:var(--s2);border:1px solid var(--bsoft);
+  border-radius:8px;padding:10px;text-align:center}
+.cpv{display:block;font-size:.95rem;font-weight:800;color:var(--brand2)}
+.cpl{display:block;font-size:.67rem;color:var(--ink3);margin-top:2px}
+
+/* ── Net worth history ── */
+.nwh{display:grid;gap:6px;margin-top:10px}
+.nwe{display:flex;justify-content:space-between;align-items:center;
+  background:var(--s2);border:1px solid var(--bsoft);border-radius:8px;
+  padding:10px 13px;font-size:.855rem}
+.nwd{font-weight:700;color:var(--ink2)}
+.nwv{font-weight:800}
+.nwv.pos{color:var(--green2)}.nwv.neg{color:var(--red2)}
+.nwdelta{font-size:.75rem;padding:2px 7px;border-radius:999px;margin-left:8px}
+.nwdelta.up{background:var(--gdim);color:var(--green2)}
+.nwdelta.dn{background:var(--rdim);color:var(--red2)}
+
+/* ── Settings ── */
+.ssec{background:var(--s2);border:1px solid var(--bsoft);
+  border-radius:11px;padding:15px;margin-bottom:11px}
+.ssec h3{font-size:.7rem;text-transform:uppercase;letter-spacing:.09em;
+  color:var(--ink3);margin-bottom:11px;padding-bottom:8px;
+  border-bottom:1px solid var(--bsoft)}
+.srow{display:flex;align-items:center;gap:9px;margin-bottom:7px;font-size:.855rem}
+.srow:last-child{margin-bottom:0}
+.srow label{flex:1;color:var(--ink2)}
+.sinp{font:inherit;padding:6px 9px;width:100px;text-align:right;
+  background:var(--s3);border:1px solid var(--border);
+  border-radius:7px;color:var(--ink)}
+.sinp:focus{border-color:var(--brand);outline:none}
+.sunit{font-size:.78rem;color:var(--ink3)}
+.expbox{background:var(--bg);border:1px solid var(--border);border-radius:7px;
+  padding:11px;font-size:.72rem;font-family:monospace;overflow-x:auto;
+  max-height:200px;white-space:pre;color:var(--ink3);margin-top:9px;display:none}
+.logentry{background:var(--s3);border:1px solid var(--bsoft);border-radius:7px;
+  padding:9px 11px;margin-bottom:5px;font-size:.8rem}
+.logrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;
+  color:var(--ink3);font-size:.72rem}
+.dzone{border-color:rgba(239,68,68,.3)!important}
+
+/* ── Paycheck allocator ── */
+.paloc{background:var(--s2);border:1px solid var(--bsoft);
+  border-radius:11px;padding:15px}
+.parow{display:flex;justify-content:space-between;align-items:center;
+  padding:8px 0;border-bottom:1px solid var(--bsoft);font-size:.855rem;gap:10px}
+.parow:last-child{border-bottom:none}
+.pan{color:var(--ink2);flex:1}
+.pav{font-weight:700;color:var(--green2);white-space:nowrap}
+.painp{font:inherit;padding:5px 8px;width:85px;text-align:right;
+  background:var(--s3);border:1px solid var(--border);border-radius:6px;color:var(--ink);font-size:.82rem}
+.painp:focus{border-color:var(--green);outline:none}
+.paremain{display:flex;justify-content:space-between;align-items:center;
+  padding:10px 0 0;margin-top:6px;border-top:2px solid var(--border);
+  font-weight:700;font-size:.9rem}
+
+/* ── Savings rate ── */
+.srbar{display:grid;gap:8px;margin-top:10px}
+.srrow{display:flex;align-items:center;gap:10px;font-size:.84rem}
+.srlbl{width:140px;color:var(--ink2);flex-shrink:0}
+.srpct{width:42px;text-align:right;font-weight:700;flex-shrink:0}
+
+/* ── Interest display ── */
+.irow{display:flex;justify-content:space-between;align-items:center;
+  padding:7px 0;border-bottom:1px solid var(--bsoft);font-size:.855rem}
+.irow:last-child{border-bottom:none}
+.irow span{color:var(--ink2)}.irow strong{color:var(--red2)}
+.itotal{display:flex;justify-content:space-between;font-weight:800;
+  font-size:.95rem;padding:10px 0 0;margin-top:5px;
+  border-top:2px solid var(--border)}
+.itotal span{color:var(--ink2)}.itotal strong{color:var(--red2)}
+
+/* ── Misc utilities ── */
+.snote{font-size:.79rem;color:var(--ink3)}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;
+  margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+body.pm .pv{filter:blur(5px);user-select:none;transition:filter .2s}
+body.pm .pv:hover{filter:blur(0)}
+
+/* ── Footer ── */
+footer{text-align:center;color:var(--ink3);font-size:.79rem;
+  padding:24px 14px;border-top:1px solid var(--bsoft);margin-top:36px}
+footer strong{color:var(--ink2)}
+
+/* ── Responsive ── */
+@media(max-width:700px){
+  .ah{flex-direction:column}
+  .ha{justify-content:flex-start}
+  .bs .blbl,.bp .blbl{display:none}
+  .hgrid{grid-template-columns:1fr 1fr}
+  .hgrid>.hstat:last-child{grid-column:span 2}
+  .g{grid-template-columns:1fr}
+  .s12,.s8,.s6,.s4,.s3{grid-column:span 1}
+  .cins{grid-template-columns:1fr}
+  .cres{grid-template-columns:1fr}
+  .cproj{grid-template-columns:1fr}
+  .serow,.wins,.capins{grid-template-columns:1fr}
+  .ss{grid-template-columns:1fr 1fr}
+  main{padding:13px 11px}
+  .card{padding:13px}
+}
+@media print{
+  #login,.tabs,.stabs,.ha,footer,.bgrp,
+  #privBtn,#lockBtn,#rstBtn,#printBtn{display:none!important}
+  body{background:#fff;color:#000}body::before{display:none}
+  .panel,.stab-panel{display:block!important}
+  .ah{background:#fff;color:#000;border-bottom:2px solid #000}
+  .ah h1{background:none;-webkit-text-fill-color:#000}
+  .card{border:1px solid #ccc;background:#fff}
+}
+</style>
 </head>
 <body>
 
-  <!-- Skip navigation for keyboard/screen-reader users -->
-  <a href="#main-content" class="skip-link">Skip to main content</a>
-
-  <!-- ─── Login overlay ─── -->
-  <div id="login" class="login-screen" role="dialog" aria-modal="true" aria-labelledby="loginHeading">
-    <form class="login-card" id="loginForm" novalidate>
-      <p class="eyebrow" aria-hidden="true">Private Household Tool</p>
-      <h1 id="loginHeading">Financial Plan Tracker</h1>
-      <p>Enter the passcode to open the execution dashboard.</p>
-      <div class="field-group">
-        <label for="passwordInput">Passcode</label>
-        <input
-          id="passwordInput"
-          type="password"
-          placeholder="Enter passcode"
-          autocomplete="current-password"
-          aria-required="true"
-          aria-describedby="loginError loginNote"
-        />
+<!-- LOGIN -->
+<div id="login">
+  <div class="lcard">
+    <p class="ey">Private · Household</p>
+    <h1>GJ Financial</h1>
+    <p>Enter your passcode to continue.</p>
+    <form id="loginForm" novalidate>
+      <div class="fg">
+        <label for="pwi">Passcode</label>
+        <input id="pwi" type="password" placeholder="••••••"
+          autocomplete="current-password" aria-required="true"/>
       </div>
-      <button type="submit" class="btn-primary full-width">Unlock Dashboard</button>
-      <p id="loginError" class="error" role="alert" aria-live="assertive"></p>
-      <p id="loginNote" class="fine-print">
-        ⚠️ Client-side passcode only — not bank-grade security.
-        Do not store account numbers, SSNs, or full credentials in this app.
-      </p>
+      <button type="submit" class="bp fw">Unlock</button>
+      <p id="lerr" class="lerr" role="alert" aria-live="assertive"></p>
     </form>
+    <p class="fnote">Client-side passcode only. No data leaves this device.</p>
   </div>
+</div>
 
-  <!-- ─── App header ─── -->
-  <header class="app-header" role="banner">
-    <div class="header-text">
-      <p class="eyebrow">June 2026 Execution Plan</p>
-      <h1>Garner-Johnson Tracker</h1>
-      <p class="subtitle">Paycheck allocation · debt payoff · savings · quarterly review</p>
+<!-- HEADER -->
+<header class="ah" role="banner">
+  <div>
+    <p class="ey">Financial Dashboard</p>
+    <h1>GJ Financial</h1>
+    <p class="sub">Garner · Johnson · 2026 and beyond</p>
+  </div>
+  <div class="ha">
+    <span id="ludisp" class="lu"></span>
+    <button id="privBtn" class="bs" aria-pressed="false">
+      <span>👁</span><span class="blbl">Hide $</span>
+    </button>
+    <button id="printBtn" class="bs"><span class="blbl">Print</span></button>
+    <button id="rstBtn" class="bd"><span class="blbl">Reset</span></button>
+    <button id="lockBtn" class="bs"><span class="blbl">Lock</span></button>
+  </div>
+</header>
+
+<!-- TABS -->
+<nav class="tabs" role="tablist" aria-label="App sections">
+  <button class="tab active" role="tab" aria-selected="true" data-tab="dashboard">Dashboard</button>
+  <button class="tab" role="tab" aria-selected="false" data-tab="daniel">Daniel</button>
+  <button class="tab" role="tab" aria-selected="false" data-tab="sonia">Sonia</button>
+  <button class="tab" role="tab" aria-selected="false" data-tab="household">Household</button>
+  <button class="tab" role="tab" aria-selected="false" data-tab="planning">Planning</button>
+  <button class="tab" role="tab" aria-selected="false" data-tab="settings">Settings</button>
+</nav>
+
+<main id="mc">
+  <section id="tab-dashboard" class="panel active" role="tabpanel" tabindex="-1"></section>
+  <section id="tab-daniel"    class="panel" role="tabpanel" tabindex="-1"></section>
+  <section id="tab-sonia"     class="panel" role="tabpanel" tabindex="-1"></section>
+  <section id="tab-household" class="panel" role="tabpanel" tabindex="-1"></section>
+  <section id="tab-planning"  class="panel" role="tabpanel" tabindex="-1"></section>
+  <section id="tab-settings"  class="panel" role="tabpanel" tabindex="-1"></section>
+</main>
+
+<footer role="contentinfo">
+  <p>Operating rule: <strong>every paycheck is assigned before spending starts.</strong></p>
+  <p class="snote" style="margin-top:4px">All data stays on this device. Nothing is transmitted.</p>
+</footer>
+
+<script>
+/* ============================================================
+   GJ Financial · app.js — embedded
+   Auth: sessionStorage 'financeUnlocked' === 'true' (original logic)
+   Password: window.GJ_PASS = 'JASPER'
+============================================================ */
+'use strict';
+
+/* ── Password — single source of truth ─────────────────────── */
+const PASS = 'JASPER';
+
+/* ── Financial data ─────────────────────────────────────────── */
+const D = {
+  daniel: {
+    income: 3200,
+    debts: [
+      {id:'d0', name:'NFCU Visa',         bal:9315.95,  apr:17.5, min:452.82},
+      {id:'d1', name:'NFCU Vehicle Loan', bal:22010.21, apr:9.14, min:426.20},
+      {id:'d2', name:'Apple Card',        bal:930.39,   apr:20,   min:50    },
+    ],
+    savings:[
+      {id:'s0', name:'Move Fund',      bal:0,   goal:1950},
+      {id:'s1', name:'Emergency Fund', bal:0,   goal:5000},
+    ],
+    caps:[
+      {id:'c0', name:'Gas / Transport', cap:175},
+      {id:'c1', name:'Food & Personal', cap:150},
+      {id:'c2', name:'Fast Food',       cap:60 },
+      {id:'c3', name:'Online Shopping', cap:50 },
+    ],
+    checklist:[
+      'Cancel ChatGPT, Spotify, Xbox Game Pass, downgrade Notion.',
+      'Cancel Planet Fitness in person — keep the receipt.',
+      'Load $300 into Bills Bucket on June 5.',
+      'Call Verizon and target $80–$120/month.',
+      'Pay vehicle loan by June 20.',
+      'Keep NFCU Visa at zero new charges.',
+      'Build Bills Bucket to $1,950 by July 10.',
+      'Start $700/month Visa payoff after the move.',
+      'Protect EasyStart Certificate until December 2026.',
+    ],
+    paychecks:[
+      ['Fri Jun 5',  '$621',    '$300 move fund · $100 vehicle · $100 food/gas · $54.16 rent reserve · $66.84 floor'],
+      ['Fri Jun 12', '$621',    '$300 move fund · $150 vehicle · $134 Progressive · $37 spending'],
+      ['Fri Jun 19', '$621',    '$300 move fund · $176.20 vehicle final · $30.73 Claude/Netflix · $12.50 TruStage · $50 Apple · $51.57 food/gas'],
+      ['Fri Jun 26', '$621',    '$300 move fund · $152.22 Verizon · $50 Comcast · $68.78 food/personal · $50 buffer'],
+      ['VA Jun 30',  '$795.84', '$645.84 rent · $150 move fund'],
+      ['Fri Jul 3',  '$621',    '$300 move fund · $321 Visa reserve'],
+      ['Fri Jul 10', '$621',    '$300 move fund · $131.82 Visa reserve · $189.18 food/personal'],
+    ],
+  },
+  sonia: {
+    income: 2200,
+    debts:[
+      {id:'e0', name:'NW Bank Loan',  bal:2266.02, apr:12.5, min:135.83},
+      {id:'e1', name:'Family Debt',   bal:10000,   apr:0,    min:200   },
+      {id:'e2', name:'Apple Card',    bal:0,        apr:20,   min:20    },
+    ],
+    savings:[
+      {id:'f0', name:'Apple / Emergency', bal:900, goal:2500},
+      {id:'f1', name:'Sinking Fund',      bal:0,   goal:1000},
+    ],
+    caps:[
+      {id:'g0', name:'Beauty / Personal', cap:100},
+      {id:'g1', name:'Fast Food',         cap:60 },
+      {id:'g2', name:'Amazon / Online',   cap:50 },
+      {id:'g3', name:'Apple Cash',        cap:50 },
+    ],
+    checklist:[
+      'Move $900 Apple Cash to Apple Savings.',
+      'Add $100 from next paycheck → $1,000 emergency savings.',
+      'Cancel Planet Fitness in person.',
+      'Log NW loan as $2,266.02 at 12.50% APR.',
+      'Send family repayment message.',
+      'Cap fast food at $60/month.',
+      'Cap beauty/personal care at $100/month.',
+      'Cap Amazon/online at $50/month.',
+      'Confirm old address obligations end at move: Rocket, electric, JJ Peters, Suburban Water.',
+    ],
+    paychecks:[
+      ['Apple Savings top-off',          '$100'],
+      ['Rocket/current housing',         '$400'],
+      ['Utilities/trash/water reserve',  '$150'],
+      ['NW loan reserve',                '$68' ],
+      ['Phone reserve',                  '$35' ],
+      ['Food/gas',                       '$125'],
+      ['Beauty/personal',                '$40' ],
+      ['Fast food',                      '$20' ],
+      ['Amazon',                         '$20' ],
+      ['Named-purpose Apple Cash',       '$20' ],
+      ['Checking floor',                 '$122'],
+    ],
+    loanPayoff:[
+      ['$135.83 min','19 months','$236.27'],
+      ['$150',       '17 months','$212.54'],
+      ['$200',       '13 months','$157.92'],
+      ['$250',       '10 months','$126.92'],
+      ['$300',       '8 months', '$106.52'],
+    ],
+    familyTimeline:[
+      ['Start','$10,000'],['Mo 1','$9,800'],['Mo 2','$9,600'],
+      ['Mo 3','$9,300'],['Mo 6','$8,400'],['Mo 12','$6,600'],
+      ['Mo 18','$4,800'],['Mo 24','$3,000'],['Mo 30','$1,200'],['Mo 34','$0'],
+    ],
+  },
+  household:{
+    split:{daniel:0.59, sonia:0.41},
+    sharedBills:[
+      {name:'Rent',      total:800,  daniel:472, sonia:328},
+      {name:'Electric',  total:150,  daniel:89,  sonia:62 },
+      {name:'Internet',  total:50,   daniel:30,  sonia:21 },
+      {name:'Groceries', total:300,  daniel:177, sonia:123},
+    ],
+    debtOrder:[
+      [1,'No overdrafts / no new Visa charges','Stops new damage'                              ],
+      [2,'Daniel NFCU Visa',                   'Highest APR'                                  ],
+      [3,'Sonia family debt',                  'Relationship preservation'                    ],
+      [4,'Sonia NW loan',                      '$2,266.02 at 12.50%; extra after savings goal'],
+      [5,'Daniel vehicle loan',                'Large balance at 9.14%'                       ],
+      [6,'Investing',                          'Only after triggers are met'                  ],
+    ],
+    netWorth:[
+      [1, '$8,756','$21,752','$9,800','$2,148',  '$4,237', '$0',    '-$38,218'],
+      [6, '$5,826','$20,429','$8,400','$1,544',  '$6,087', '$0',    '-$30,112'],
+      [12,'$2,009','$18,774','$6,600','$757',    '$7,887', '$0',    '-$20,253'],
+      [18,'$0',    '$14,926','$4,800','$95 est.','$9,687', '$0',    '-$10,134'],
+      [24,'$0',    '$8,734', '$3,000','$0',      '$10,887','$900',  '$53'     ],
+      [30,'$0',    '$2,254', '$1,200','$0',      '$12,087','$1,800','$10,433' ],
+      [34,'$0',    '$0',     '$0',    '$0',      '$12,887','$2,400','$15,287' ],
+      [36,'$0',    '$0',     '$0',    '$0',      '$13,487','$3,000','$16,487' ],
+    ],
+  },
+};
+
+/* ── Storage ─────────────────────────────────────────────────── */
+const LS = {
+  g:  (k,d=null) => { try{const v=localStorage.getItem(k);return v===null?d:JSON.parse(v);}catch{return d;} },
+  s:  (k,v)      => { try{localStorage.setItem(k,JSON.stringify(v));}catch{} },
+  n:  (k,d)      => { const v=localStorage.getItem(k); return v!==null?parseFloat(v):d; },
+  rm: (k)        => { try{localStorage.removeItem(k);}catch{} },
+  ks: (p)        => { try{return Object.keys(localStorage).filter(k=>k.startsWith(p));}catch{return[];} },
+};
+
+/* ── Formatting ──────────────────────────────────────────────── */
+const $ = (s,r=document)=>r.querySelector(s);
+const $$= (s,r=document)=>[...r.querySelectorAll(s)];
+const M  = n=>(parseFloat(n)||0).toLocaleString('en-US',{style:'currency',currency:'USD'});
+const pv = v=>`<span class="pv">${M(v)}</span>`;
+const cap= s=>s.charAt(0).toUpperCase()+s.slice(1);
+
+/* ── Auth (original sessionStorage logic) ────────────────────── */
+function initAuth(){
+  const loginEl=$('#login');
+  if(sessionStorage.getItem('financeUnlocked')==='true'){loginEl.style.display='none';return;}
+  setTimeout(()=>{const p=$('#pwi');if(p)p.focus();},80);
+  $('#loginForm').addEventListener('submit',e=>{
+    e.preventDefault();
+    const val=$('#pwi').value.trim().toUpperCase();
+    if(val===PASS){
+      sessionStorage.setItem('financeUnlocked','true');
+      loginEl.style.display='none';
+      const m=$('#mc');if(m)m.focus();
+    } else {
+      const err=$('#lerr');
+      err.textContent='Incorrect passcode — try again.';
+      $('#pwi').value='';$('#pwi').focus();
+      setTimeout(()=>{err.textContent='';},3500);
+    }
+  });
+  $('#lockBtn').addEventListener('click',()=>{sessionStorage.removeItem('financeUnlocked');location.reload();});
+}
+
+/* ── Live totals ─────────────────────────────────────────────── */
+function totals(){
+  let debt=0,sav=0;
+  [...D.daniel.debts,...D.sonia.debts].forEach(d=>debt+=LS.n('b:'+d.id,d.bal));
+  [...D.daniel.savings,...D.sonia.savings].forEach(s=>sav+=LS.n('b:'+s.id,s.bal));
+  const dW=LS.n('w:daniel:c',0)+LS.n('w:daniel:s',0);
+  const sW=LS.n('w:sonia:c',0)+LS.n('w:sonia:s',0);
+  const liquid=sav+dW+sW;
+  const nw=liquid-debt;
+  let burn=0;
+  [...D.daniel.debts,...D.sonia.debts].forEach(d=>{
+    if(d.apr)burn+=LS.n('b:'+d.id,d.bal)*(d.apr/100/12);
+  });
+  return {debt,sav,liquid,nw,dW,sW,burn};
+}
+
+/* ── Payoff estimate ─────────────────────────────────────────── */
+function payoffEst(bal,apr,pmt){
+  if(pmt<=0||bal<=0)return{months:0,interest:0,date:'—'};
+  const r=apr/100/12; let b=bal,mo=0,int=0;
+  while(b>0&&mo<600){const i=b*r;int+=i;b=b+i-pmt;mo++;}
+  const d=new Date();d.setMonth(d.getMonth()+mo);
+  return{months:mo,interest:int,date:d.toLocaleString('default',{month:'short',year:'numeric'})};
+}
+
+/* ── Interest savings vs minimum ────────────────────────────── */
+function intSavings(bal,apr,pmt,min){
+  const a=payoffEst(bal,apr,pmt),b=payoffEst(bal,apr,min);
+  return{moSaved:b.months-a.months,intSaved:b.interest-a.interest};
+}
+
+/* ── Slider builder ──────────────────────────────────────────── */
+function slider(id,label,type,defaultBal,defaultGoal,apr){
+  const cur=LS.n('b:'+id,defaultBal);
+  const goal=LS.n('g:'+id,defaultGoal);
+  const pct=goal>0?(type==='debt'?Math.max(0,Math.min(100,((goal-cur)/goal)*100)):Math.max(0,Math.min(100,(cur/goal)*100))):0;
+  const rv=type==='debt'?Math.max(0,goal-cur):cur;
+  const mainVal=type==='debt'?cur:(cur);
+  const mainCls=type==='debt'?'r':'g';
+  const subVal=type==='debt'?M(goal-cur):M(Math.max(0,goal-cur));
+  const subLbl=type==='debt'?'Paid down':'To goal';
+  const fillCls=pct>=100?'fl':pct>=60?'gr':pct>=30?'':pct>=10?'am':'rd';
+
+  // Payoff estimator for debts
+  let pestHTML='';
+  if(type==='debt'&&apr>0){
+    const curPmt=LS.n('p:'+id,defaultBal>0?Math.ceil(defaultBal*0.03):0);
+    const est=payoffEst(cur,apr,curPmt>0?curPmt:1);
+    const minEst=payoffEst(cur,apr,D.daniel.debts.find(d=>d.id===id)||D.sonia.debts.find(d=>d.id===id)?
+      (D.daniel.debts.find(d=>d.id===id)||D.sonia.debts.find(d=>d.id===id)).min : 100);
+    const sav=intSavings(cur,apr,curPmt>0?curPmt:1,(D.daniel.debts.find(d=>d.id===id)||D.sonia.debts.find(d=>d.id===id)||{min:100}).min);
+    pestHTML=`
+    <div class="pest" style="margin-top:10px">
+      <div class="prow"><span>Monthly payment</span>
+        <strong><input type="number" step="5" min="0" style="width:85px;text-align:right;background:var(--s3);border:1px solid var(--border);border-radius:6px;padding:4px 7px;color:var(--ink);font:inherit;font-size:.82rem" data-pmt="${id}" value="${curPmt||''}" placeholder="${(D.daniel.debts.find(d=>d.id===id)||D.sonia.debts.find(d=>d.id===id)||{min:100}).min}"/></strong>
+      </div>
+      <div class="prow"><span>Paid off by</span><strong class="brand" id="pd-${id}">${est.date}</strong></div>
+      <div class="prow"><span>Months remaining</span><strong id="pm-${id}">${est.months}</strong></div>
+      <div class="prow"><span>Total interest</span><strong class="bad" id="pi-${id}">${M(est.interest)}</strong></div>
+      ${sav.intSaved>0?`<div class="prow"><span>vs. minimum — saves</span><strong class="good" id="ps-${id}">${M(sav.intSaved)} · ${sav.moSaved} mo sooner</strong></div>`:''}
+    </div>`;
+  }
+
+  return `
+  <div class="sw" data-sid="${id}" data-stype="${type}" data-def-bal="${defaultBal}" data-def-goal="${defaultGoal}">
+    <div class="sh">
+      <span class="sn">${label}</span>
+      <span class="sp" id="sp-${id}">${pct.toFixed(1)}%</span>
     </div>
-    <div class="header-actions" role="toolbar" aria-label="App controls">
-      <span id="lastUpdatedDisplay" class="last-updated" aria-live="polite"></span>
-      <button id="privacyBtn" class="btn-secondary" aria-pressed="false" title="Toggle privacy mode">
-        <span aria-hidden="true">👁</span>
-        <span class="btn-label">Hide $</span>
-      </button>
-      <a class="btn-secondary" href="docs/Garner_Johnson_Financial_Execution_Package_v3.pdf" target="_blank" rel="noopener" aria-label="Open PDF report in new tab">PDF</a>
-      <button id="printBtn" class="btn-secondary" aria-label="Print this page">Print</button>
-      <button id="resetBtn" class="btn-danger" aria-label="Reset all saved progress data">Reset</button>
-      <button id="lockBtn" class="btn-secondary" aria-label="Lock app and return to passcode screen">Lock</button>
+    <div class="pb"><div class="pf ${fillCls}" id="sf-${id}" style="width:${pct.toFixed(1)}%"></div></div>
+    <input type="range" class="sr" id="sr-${id}" min="0" max="${goal}" step="1" value="${rv}" aria-label="${label}"/>
+    <div class="ss">
+      <div style="text-align:center">
+        <span class="sv ${mainCls} pv" id="sv1-${id}">${M(mainVal)}</span>
+        <span class="sl2">${type==='debt'?'Remaining':'Saved'}</span>
+      </div>
+      <div style="text-align:center">
+        <span class="sv b pv" id="sv2-${id}">${subVal}</span>
+        <span class="sl2">${subLbl}</span>
+      </div>
     </div>
-  </header>
+    <div class="serow">
+      <label class="selbl">${type==='debt'?'Current Balance':'Current Saved'}
+        <input type="number" step="0.01" min="0" class="seinp" id="sb-${id}"
+          value="${cur}" data-sbal="${id}" data-stype="${type}"/>
+      </label>
+      <label class="selbl">Goal
+        <input type="number" step="0.01" min="1" class="seinp" id="sg-${id}"
+          value="${goal}" data-sgoal="${id}" data-stype="${type}"/>
+      </label>
+    </div>
+    ${type==='debt'&&apr>0?`<div class="smeta">APR ${apr}% · ${M(cur*(apr/100/12))}/mo interest</div>`:''}
+    ${pestHTML}
+  </div>`;
+}
 
-  <!-- ─── Tab navigation ─── -->
-  <nav class="tabs" aria-label="Financial tracker sections" role="tablist">
-    <button class="tab active" role="tab" aria-selected="true"  aria-controls="dashboard" data-target="dashboard">Dashboard</button>
-    <button class="tab"        role="tab" aria-selected="false" aria-controls="daniel"    data-target="daniel">Daniel</button>
-    <button class="tab"        role="tab" aria-selected="false" aria-controls="sonia"     data-target="sonia">Sonia</button>
-    <button class="tab"        role="tab" aria-selected="false" aria-controls="household" data-target="household">Household</button>
-    <button class="tab"        role="tab" aria-selected="false" aria-controls="review"    data-target="review">Review</button>
-    <button class="tab"        role="tab" aria-selected="false" aria-controls="settings"  data-target="settings">Settings</button>
-  </nav>
+function updSlider(id,type,cur,goal){
+  const pct=goal>0?(type==='debt'?Math.max(0,Math.min(100,((goal-cur)/goal)*100)):Math.max(0,Math.min(100,(cur/goal)*100))):0;
+  const fill=$('#sf-'+id),pctEl=$('#sp-'+id),v1=$('#sv1-'+id),v2=$('#sv2-'+id);
+  const rng=$('#sr-'+id),balInp=$('#sb-'+id);
+  const fillCls=pct>=100?'fl':pct>=60?'gr':pct>=30?'':pct>=10?'am':'rd';
+  if(fill){fill.style.width=pct.toFixed(1)+'%';fill.className=`pf ${fillCls}`;}
+  if(pctEl)pctEl.textContent=pct.toFixed(1)+'%';
+  if(v1)v1.textContent=M(type==='debt'?cur:cur);
+  if(v2)v2.textContent=type==='debt'?M(goal-cur):M(Math.max(0,goal-cur));
+  if(rng&&document.activeElement!==rng){rng.max=goal;rng.value=type==='debt'?Math.max(0,goal-cur):cur;}
+  if(balInp&&document.activeElement!==balInp)balInp.value=cur;
+  updPayoffEst(id);
+  updHeroStats();
+}
 
-  <!-- ─── Main content ─── -->
-  <main id="main-content">
-    <section id="dashboard" class="panel active" role="tabpanel" aria-labelledby="tab-dashboard" tabindex="-1"></section>
-    <section id="daniel"    class="panel"        role="tabpanel" aria-labelledby="tab-daniel"    tabindex="-1"></section>
-    <section id="sonia"     class="panel"        role="tabpanel" aria-labelledby="tab-sonia"     tabindex="-1"></section>
-    <section id="household" class="panel"        role="tabpanel" aria-labelledby="tab-household" tabindex="-1"></section>
-    <section id="review"    class="panel"        role="tabpanel" aria-labelledby="tab-review"    tabindex="-1"></section>
-    <section id="settings"  class="panel"        role="tabpanel" aria-labelledby="tab-settings"  tabindex="-1"></section>
-  </main>
+function updPayoffEst(id){
+  const allDebts=[...D.daniel.debts,...D.sonia.debts];
+  const debt=allDebts.find(d=>d.id===id); if(!debt) return;
+  const cur=LS.n('b:'+id,debt.bal);
+  const pmt=LS.n('p:'+id,0);
+  if(!pmt||!debt.apr)return;
+  const est=payoffEst(cur,debt.apr,pmt);
+  const sav=intSavings(cur,debt.apr,pmt,debt.min);
+  const pdEl=$('#pd-'+id),pmEl=$('#pm-'+id),piEl=$('#pi-'+id),psEl=$('#ps-'+id);
+  if(pdEl)pdEl.textContent=est.date;
+  if(pmEl)pmEl.textContent=est.months;
+  if(piEl)piEl.textContent=M(est.interest);
+  if(psEl&&sav.intSaved>0)psEl.textContent=`${M(sav.intSaved)} · ${sav.moSaved} mo sooner`;
+}
 
-  <footer role="contentinfo">
-    <p>Operating rule: <strong>every paycheck is assigned before spending starts.</strong></p>
-    <p class="fine-print">Static app — no data leaves this device. Progress stored in localStorage only.</p>
-  </footer>
+function updHeroStats(){
+  const t=totals();
+  const h0=$('.hv.bad'),h1=$('.hv.good'),h2=$('.hv:not(.bad):not(.good)');
+  // update hero values on dashboard if visible
+  const heroEls=$$('.hv');
+  if(heroEls[0])heroEls[0].textContent=M(t.debt);
+  if(heroEls[1])heroEls[1].textContent=M(t.liquid);
+  if(heroEls[2]){heroEls[2].textContent=M(t.nw);heroEls[2].className=`hv ${t.nw>=0?'good':'bad'} pv`;}
+  // update wallet totals
+  const dwtEl=$('#wt-daniel'),swtEl=$('#wt-sonia');
+  if(dwtEl)dwtEl.textContent=M(t.dW);
+  if(swtEl)swtEl.textContent=M(t.sW);
+  // update interest burn
+  const burnEl=$('#dash-burn');
+  if(burnEl)burnEl.textContent=M(t.burn)+'/mo';
+  // update nw history if visible
+  updNWSnippet();
+}
 
-  <script src="js/financeData.js"></script>
-  <script src="js/app.js"></script>
+/* ── Wallet builder ──────────────────────────────────────────── */
+function buildWallet(p){
+  const c=LS.n(`w:${p}:c`,0),s=LS.n(`w:${p}:s`,0);
+  return `<div class="wb">
+    <div class="wtr">
+      <span class="wtl">Total on hand</span>
+      <span class="wtv pv" id="wt-${p}">${M(c+s)}</span>
+    </div>
+    <div class="wins">
+      <label class="wlbl">Checking
+        <input type="number" step="0.01" min="0" class="winp"
+          value="${c}" data-w="${p}" data-wt="c"/>
+      </label>
+      <label class="wlbl">Savings
+        <input type="number" step="0.01" min="0" class="winp"
+          value="${s}" data-w="${p}" data-wt="s"/>
+      </label>
+    </div>
+  </div>`;
+}
+
+/* ── Spending cap builder ────────────────────────────────────── */
+function buildCap(cap){
+  const spent=LS.n(`cs:${cap.id}`,0);
+  const lim=LS.n(`cl:${cap.id}`,cap.cap);
+  const pct=lim>0?Math.min(100,(spent/lim)*100):0;
+  const left=Math.max(0,lim-spent);
+  const cls=pct>=100?'r':pct>=80?'w':'';
+  return `<div class="caprow" data-capid="${cap.id}">
+    <div class="caph">
+      <span class="capn">${cap.name}</span>
+      <span class="caps ${cls}" id="cst-${cap.id}">${pct>=100?'OVER':M(left)+' left'}</span>
+    </div>
+    <div class="pb" style="margin:4px 0 7px">
+      <div class="pf ${cls==='r'?'rd':cls==='w'?'am':'gr'}" id="cf-${cap.id}" style="width:${pct.toFixed(1)}%"></div>
+    </div>
+    <div class="capins">
+      <label class="caplbl">Spent this month
+        <input type="number" step="0.01" min="0" class="capinp"
+          id="csp-${cap.id}" value="${spent}" data-csp="${cap.id}"/>
+      </label>
+      <label class="caplbl">Monthly cap
+        <input type="number" step="0.01" min="1" class="capinp"
+          id="clm-${cap.id}" value="${lim}" data-clm="${cap.id}"/>
+      </label>
+    </div>
+  </div>`;
+}
+
+function updCap(id,spent,lim){
+  const pct=lim>0?Math.min(100,(spent/lim)*100):0;
+  const left=Math.max(0,lim-spent);
+  const cls=pct>=100?'r':pct>=80?'w':'';
+  const fill=$('#cf-'+id),stat=$('#cst-'+id);
+  if(fill){fill.style.width=pct.toFixed(1)+'%';fill.className=`pf ${cls==='r'?'rd':cls==='w'?'am':'gr'}`;}
+  if(stat){stat.textContent=pct>=100?'OVER':M(left)+' left';stat.className=`caps ${cls}`;}
+}
+
+/* ── Checklist builder ───────────────────────────────────────── */
+function buildChecklist(id,items){
+  const saved=LS.g(`ck:${id}`,{});
+  const done=items.filter((_,i)=>saved[i]).length;
+  return `<p class="clsum" id="cks-${id}">${done} of ${items.length} complete</p>
+  <div class="cl">${items.map((item,i)=>`
+    <div class="cr${saved[i]?' dn':''}">
+      <input type="checkbox" id="ck-${id}-${i}"
+        data-ckl="${id}" data-cki="${i}" ${saved[i]?'checked':''}/>
+      <label for="ck-${id}-${i}">${item}</label>
+    </div>`).join('')}</div>`;
+}
+
+/* ── Table builder ───────────────────────────────────────────── */
+function tbl(headers,rows,lbl=''){
+  return `<div class="tw" role="region" aria-label="${lbl}" tabindex="0">
+    <table><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody>
+    </table></div>`;
+}
+
+/* ── Sub-tabs builder ────────────────────────────────────────── */
+function subTabs(person,tabs,active){
+  return `<div class="stabs">${tabs.map(t=>`
+    <button class="stab${t.id===active?' active':''}" data-person="${person}" data-st="${t.id}">${t.lbl}</button>`
+  ).join('')}</div>`;
+}
+
+/* ── Net worth history snippet ───────────────────────────────── */
+function updNWSnippet(){
+  const log=LS.g('nwlog',[]);
+  const el=$('#nw-history');
+  if(!el||!log.length)return;
+  el.innerHTML=log.slice(0,5).map((e,i)=>{
+    const prev=log[i+1];
+    const delta=prev?e.nw-prev.nw:null;
+    const dhtml=delta!==null?`<span class="nwdelta ${delta>=0?'up':'dn'}">${delta>=0?'+':''}${M(delta)}</span>`:'';
+    return `<div class="nwe">
+      <span class="nwd">${e.date}</span>
+      <span class="nwv ${e.nw>=0?'pos':'neg'} pv">${M(e.nw)} ${dhtml}</span>
+    </div>`;
+  }).join('');
+}
+
+/* ============================================================
+   RENDER FUNCTIONS
+============================================================ */
+
+/* ── DASHBOARD ───────────────────────────────────────────────── */
+function renderDashboard(){
+  const t=totals();
+  const mv=LS.n('b:s0',D.daniel.savings[0].bal);
+  const mg=LS.n('g:s0',D.daniel.savings[0].goal);
+  const mvTarget=new Date('2026-07-10'),today=new Date();
+  const days=Math.max(0,Math.ceil((mvTarget-today)/86400000));
+  const pays=Math.max(1,Math.floor(days/14));
+  const mvRem=Math.max(0,mg-mv);
+  const mvPct=(mg>0?Math.min(100,(mv/mg)*100):0).toFixed(1);
+  const billTotal=D.household.sharedBills.reduce((a,b)=>a+b.total,0);
+
+  $('#tab-dashboard').innerHTML=`<div class="g">
+
+    <!-- Hero stats -->
+    <div class="s12">
+      <div class="hgrid">
+        <div class="hstat">
+          <span class="hv bad pv" id="h-debt">${M(t.debt)}</span>
+          <span class="hl">Total Debt</span>
+        </div>
+        <div class="hstat">
+          <span class="hv good pv" id="h-liq">${M(t.liquid)}</span>
+          <span class="hl">Total Assets</span>
+          <span class="hsub">${M(t.dW+t.sW)} liquid wallets</span>
+        </div>
+        <div class="hstat">
+          <span class="hv ${t.nw>=0?'good':'bad'} pv" id="h-nw">${M(t.nw)}</span>
+          <span class="hl">Net Worth</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Move fund -->
+    <div class="card s6">
+      <h2>Move Fund Countdown</h2>
+      <div class="met"><span>Days to July 10</span><strong class="brand">${days}</strong></div>
+      <div class="met"><span>Paychecks left</span><strong>${pays}</strong></div>
+      <div class="met"><span>Saved</span><strong class="good pv">${M(mv)}</strong></div>
+      <div class="met"><span>Still needed</span><strong class="bad pv">${M(mvRem)}</strong></div>
+      <div class="met" style="font-weight:700"><span>Per paycheck</span>
+        <strong class="brand pv">${M(mvRem/pays)}</strong></div>
+      <div class="pb" style="margin-top:10px">
+        <div class="pf ${parseFloat(mvPct)>=100?'fl':'gr'}" style="width:${mvPct}%"></div>
+      </div>
+      <p class="snote" style="text-align:right;margin-top:4px">${M(mv)} of ${M(mg)} · ${mvPct}%</p>
+    </div>
+
+    <!-- Interest burn -->
+    <div class="card s6">
+      <h2>Monthly Interest Burn</h2>
+      ${[...D.daniel.debts,...D.sonia.debts].filter(d=>d.apr>0).map(d=>{
+        const b=LS.n('b:'+d.id,d.bal);
+        return `<div class="irow"><span>${d.name}</span><strong>${M(b*(d.apr/100/12))}</strong></div>`;
+      }).join('')}
+      <div class="itotal"><span>Total / month</span>
+        <strong id="dash-burn">${M(t.burn)}/mo</strong></div>
+      <p class="snote" style="margin-top:10px">Every dollar paid above minimum reduces this number.</p>
+    </div>
+
+    <!-- Daniel wallet -->
+    <div class="card s6">
+      <h2>Daniel's Wallet</h2>
+      ${buildWallet('daniel')}
+    </div>
+
+    <!-- Sonia wallet -->
+    <div class="card s6">
+      <h2>Sonia's Wallet</h2>
+      ${buildWallet('sonia')}
+    </div>
+
+    <!-- Household snapshot -->
+    <div class="card s6">
+      <h2>Household Snapshot</h2>
+      <div class="met"><span>Combined income</span><strong class="pv">${M(D.daniel.income+D.sonia.income)}/mo</strong></div>
+      <div class="met"><span>Shared bills total</span><strong class="pv">${M(billTotal)}/mo</strong></div>
+      <div class="met"><span>Daniel's share (59%)</span><strong class="pv">${M(billTotal*0.59)}/mo</strong></div>
+      <div class="met"><span>Sonia's share (41%)</span><strong class="pv">${M(billTotal*0.41)}/mo</strong></div>
+      <div class="met"><span>Split</span><strong>59% Daniel · 41% Sonia</strong></div>
+    </div>
+
+    <!-- Savings rate -->
+    <div class="card s6">
+      <h2>Savings Rate</h2>
+      ${(()=>{
+        const inc=D.daniel.income+D.sonia.income;
+        const dDebt=D.daniel.debts.reduce((a,d)=>a+(LS.n('p:'+d.id,0)||d.min),0);
+        const sDebt=D.sonia.debts.reduce((a,d)=>a+(LS.n('p:'+d.id,0)||d.min),0);
+        const debtPct=Math.round((dDebt+sDebt)/inc*100);
+        const savPct=Math.round((LS.n('b:s0',0)+LS.n('b:s1',0)+LS.n('b:f0',0)+LS.n('b:f1',0))/(inc)*5);
+        const expPct=Math.max(0,100-debtPct-savPct);
+        const items=[
+          {lbl:'Debt Payments',pct:debtPct,cls:'rd'},
+          {lbl:'Savings / Goals',pct:savPct,cls:'gr'},
+          {lbl:'Living Expenses',pct:expPct,cls:''},
+        ];
+        return `<p class="snote" style="margin-bottom:10px">Based on combined income of ${M(inc)}/mo. Target: 20%+ to debt+savings.</p>
+        <div class="srbar">${items.map(item=>`
+          <div class="srrow">
+            <span class="srlbl">${item.lbl}</span>
+            <div class="pb" style="flex:1"><div class="pf ${item.cls}" style="width:${Math.min(100,item.pct)}%"></div></div>
+            <span class="srp">${item.pct}%</span>
+          </div>`).join('')}</div>`;
+      })()}
+    </div>
+
+    <!-- Net worth history -->
+    <div class="card s12">
+      <h2>Net Worth History</h2>
+      <p class="snote" style="margin-bottom:10px">Tap "Record Snapshot" in Settings once a month to build your history.</p>
+      <div id="nw-history">${(()=>{
+        const log=LS.g('nwlog',[]);
+        if(!log.length)return '<p class="snote">No snapshots yet — go to Settings → Record Snapshot.</p>';
+        return log.slice(0,5).map((e,i)=>{
+          const prev=log[i+1];
+          const delta=prev?e.nw-prev.nw:null;
+          const dhtml=delta!==null?`<span class="nwdelta ${delta>=0?'up':'dn'}">${delta>=0?'+':''}${M(delta)}</span>`:'';
+          return `<div class="nwe"><span class="nwd">${e.date}</span>
+            <span class="nwv ${e.nw>=0?'pos':'neg'} pv">${M(e.nw)} ${dhtml}</span></div>`;
+        }).join('');
+      })()}</div>
+    </div>
+
+  </div>`;
+}
+
+/* ── DANIEL ──────────────────────────────────────────────────── */
+const DTABS=[
+  {id:'snapshot',  lbl:'📊 Snapshot' },
+  {id:'spending',  lbl:'💳 Spending' },
+  {id:'paychecks', lbl:'📅 Paychecks'},
+  {id:'checklist', lbl:'✅ Checklist'},
+];
+function renderDaniel(){
+  const active=LS.g('st:daniel','snapshot');
+  $('#tab-daniel').innerHTML=`
+    <div class="ph">
+      <h2>Daniel</h2>
+      <span class="pill m">$${D.daniel.income.toLocaleString()}/mo</span>
+      <span class="pill w">Visa priority</span>
+      <span class="pill b">Move target: $1,950</span>
+    </div>
+    ${subTabs('daniel',DTABS,active)}
+    <div id="d-body">${renderDanielTab(active)}</div>`;
+}
+function renderDanielTab(tab){
+  const d=D.daniel;
+  switch(tab){
+    case 'snapshot': return `<div class="g">
+      <div class="card s12">
+        <h2>Debt Trackers</h2>
+        <p class="snote" style="margin-bottom:12px">Drag slider or type current balance. Edit Goal to change original. Set monthly payment to see payoff date and interest savings.</p>
+        ${d.debts.map(dt=>slider(dt.id,dt.name,'debt',dt.bal,dt.bal,dt.apr)).join('')}
+      </div>
+      <div class="card s12">
+        <h2>Savings Goals</h2>
+        ${d.savings.map(sv=>slider(sv.id,sv.name,'savings',sv.bal,sv.goal,0)).join('')}
+      </div>
+    </div>`;
+
+    case 'spending': return `<div class="g">
+      <div class="card s12">
+        <h2>Monthly Spending Caps</h2>
+        <p class="snote" style="margin-bottom:12px">Amber at 80%, red at 100%. Edit cap amount anytime.</p>
+        ${d.caps.map(c=>buildCap(c)).join('')}
+        <div class="bgrp" style="margin-top:14px">
+          <button class="bg" id="rst-dcaps">Reset Month</button>
+        </div>
+      </div>
+      <div class="card s12">
+        <h2>Budget Reference</h2>
+        ${tbl(['Category','Amount'],[
+          ['Shared household expenses','$768'],
+          ['Vehicle loan','$426.20'],
+          ['Visa minimum','$452.82'],
+          ['Extra Visa target','$247.18'],
+          ['Progressive','$134'],
+          ['Verizon target','$120'],
+          ['Gas / transportation','$175'],
+          ['Personal / food / misc','$150'],
+          ['Emergency savings','$100'],
+        ],'Daniel budget')}
+      </div>
+    </div>`;
+
+    case 'paychecks': return `<div class="g">
+      <div class="card s12">
+        <h2>Paycheck Plan: June 5 – July 10</h2>
+        ${tbl(['Date','Amount','Allocation'],d.paychecks.map(r=>[r[0],`<strong class="pv">${r[1]}</strong>`,r[2]]),'Daniel paychecks')}
+      </div>
+    </div>`;
+
+    case 'checklist': return `<div class="g">
+      <div class="card s12">
+        <h2>Action Checklist</h2>
+        ${buildChecklist('daniel',d.checklist)}
+      </div>
+    </div>`;
+
+    default:return '';
+  }
+}
+
+/* ── SONIA ───────────────────────────────────────────────────── */
+const STABS=[
+  {id:'snapshot',  lbl:'📊 Snapshot' },
+  {id:'spending',  lbl:'💳 Spending' },
+  {id:'paychecks', lbl:'📅 Paychecks'},
+  {id:'checklist', lbl:'✅ Checklist'},
+];
+function renderSonia(){
+  const active=LS.g('st:sonia','snapshot');
+  $('#tab-sonia').innerHTML=`
+    <div class="ph">
+      <h2>Sonia</h2>
+      <span class="pill m">$${D.sonia.income.toLocaleString()}/mo</span>
+      <span class="pill g">Savings first</span>
+      <span class="pill w">NW Loan 12.50%</span>
+    </div>
+    ${subTabs('sonia',STABS,active)}
+    <div id="s-body">${renderSoniaTab(active)}</div>`;
+}
+function renderSoniaTab(tab){
+  const s=D.sonia;
+  switch(tab){
+    case 'snapshot': return `<div class="g">
+      <div class="card s12">
+        <h2>Debt Trackers</h2>
+        <p class="snote" style="margin-bottom:12px">Drag or type to update. Set monthly payment to see payoff date and interest savings.</p>
+        ${s.debts.map(dt=>slider(dt.id,dt.name,'debt',dt.bal||0,Math.max(dt.bal||1,1),dt.apr)).join('')}
+      </div>
+      <div class="card s12">
+        <h2>Savings Goals</h2>
+        ${s.savings.map(sv=>slider(sv.id,sv.name,'savings',sv.bal,sv.goal,0)).join('')}
+      </div>
+      <div class="card s12">
+        <h2>NW Loan Payoff Scenarios</h2>
+        ${tbl(['Payment','Payoff','Est. Interest'],s.loanPayoff,'NW loan')}
+      </div>
+      <div class="card s12">
+        <h2>Family Debt Timeline</h2>
+        ${tbl(['Period','Balance'],s.familyTimeline.map(([a,b])=>[a,`<strong class="pv">${b}</strong>`]),'Family debt')}
+        <div class="tip" style="margin-top:12px">
+          <strong>Repayment Message</strong>
+          "I'm going to start paying <strong>$200/month</strong> beginning with my first post-move paycheck. Starting month three I'll increase to <strong>$300/month</strong>. I'll stay consistent and keep you updated."
+        </div>
+      </div>
+    </div>`;
+
+    case 'spending': return `<div class="g">
+      <div class="card s12">
+        <h2>Monthly Spending Caps</h2>
+        <p class="snote" style="margin-bottom:12px">Amber at 80%, red at 100%.</p>
+        ${s.caps.map(c=>buildCap(c)).join('')}
+        <div class="bgrp" style="margin-top:14px">
+          <button class="bg" id="rst-scaps">Reset Month</button>
+        </div>
+      </div>
+      <div class="card s12">
+        <h2>Budget Reference</h2>
+        ${tbl(['Category','Amount'],[
+          ['Personal fixed bills','$263.50'],
+          ['Shared household (41%)','$534'],
+          ['Family debt — months 1–2','$200'],
+          ['Family debt — month 3+','$300'],
+          ['Savings / sinking fund','$270'],
+          ['Gas','$120'],
+          ['Beauty','$100'],
+          ['Fast food','$60'],
+          ['Amazon','$50'],
+          ['Apple Cash named-purpose','$50'],
+        ],'Sonia budget')}
+      </div>
+    </div>`;
+
+    case 'paychecks': return `<div class="g">
+      <div class="card s12">
+        <h2>Next Paycheck Allocation</h2>
+        ${tbl(['Category','Amount'],s.paychecks.map(([a,b])=>[a,`<strong class="pv">${b}</strong>`]),'Sonia paychecks')}
+      </div>
+    </div>`;
+
+    case 'checklist': return `<div class="g">
+      <div class="card s12">
+        <h2>Action Checklist</h2>
+        ${buildChecklist('sonia',s.checklist)}
+      </div>
+    </div>`;
+
+    default:return '';
+  }
+}
+
+/* ── HOUSEHOLD ───────────────────────────────────────────────── */
+function renderHousehold(){
+  const h=D.household;
+  const bills=h.sharedBills;
+  $('#tab-household').innerHTML=`<div class="g">
+    <div class="card s12">
+      <h2>Live Bill Split Calculator</h2>
+      <p class="snote" style="margin-bottom:12px">Edit any amount to recalculate the 59/41 split instantly.</p>
+      <div id="bsplit-wrap">
+        ${bills.map(b=>`
+        <div class="met" data-bill="${b.name}">
+          <span>${b.name}</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input type="number" step="1" min="0" class="painp" style="width:75px"
+              data-bsplit="${b.name}" value="${b.total}"/>
+            <span class="snote" style="min-width:110px;text-align:right">
+              D: <strong class="pv" id="bsd-${b.name}">${M(b.total*0.59)}</strong> ·
+              S: <strong class="pv" id="bss-${b.name}">${M(b.total*0.41)}</strong>
+            </span>
+          </div>
+        </div>`).join('')}
+        <div class="met" style="font-weight:700;border-top:2px solid var(--border);margin-top:4px">
+          <span>Total</span>
+          <span>D: <strong class="pv" id="bsd-Total">${M(bills.reduce((a,b)=>a+b.total,0)*0.59)}</strong> ·
+                S: <strong class="pv" id="bss-Total">${M(bills.reduce((a,b)=>a+b.total,0)*0.41)}</strong></span>
+        </div>
+      </div>
+    </div>
+    <div class="card s6">
+      <h2>Debt Payoff Sequence</h2>
+      ${tbl(['#','Target','Why'],h.debtOrder,'Payoff order')}
+    </div>
+    <div class="card s6">
+      <h2>Combined Income</h2>
+      <div class="met"><span>Daniel</span><strong class="pv">${M(D.daniel.income)}/mo</strong></div>
+      <div class="met"><span>Sonia</span><strong class="pv">${M(D.sonia.income)}/mo</strong></div>
+      <div class="met" style="font-weight:700"><span>Combined</span>
+        <strong class="good pv">${M(D.daniel.income+D.sonia.income)}/mo</strong></div>
+    </div>
+    <div class="card s12">
+      <h2>Net Worth Trajectory (Projected, Months 1–36)</h2>
+      ${tbl(['Mo','Visa','Vehicle','Family','NW Loan','Cash','Invest','Net Worth'],
+        h.netWorth.map(r=>[`Mo ${r[0]}`,r[1],r[2],r[3],r[4],r[5],r[6],
+          `<strong style="color:${r[7].startsWith('-')?'var(--red2)':'var(--green2)'}">${r[7]}</strong>`]),
+        'Net worth trajectory')}
+    </div>
+  </div>`;
+}
+
+/* ── PLANNING ────────────────────────────────────────────────── */
+const PTABS=[
+  {id:'roadmap',   lbl:'🗺 Roadmap'  },
+  {id:'investing', lbl:'📈 Investing'},
+  {id:'allocator', lbl:'💸 Paycheck' },
+  {id:'quarterly', lbl:'📋 Quarterly'},
+];
+function renderPlanning(){
+  const active=LS.g('st:planning','roadmap');
+  $('#tab-planning').innerHTML=`
+    ${subTabs('planning',PTABS,active)}
+    <div id="p-body">${renderPlanningTab(active)}</div>`;
+}
+function renderPlanningTab(tab){
+  switch(tab){
+    case 'roadmap':   return buildRoadmap();
+    case 'investing': return buildInvesting();
+    case 'allocator': return buildAllocator();
+    case 'quarterly': return buildQuarterly();
+    default:return '';
+  }
+}
+
+function buildRoadmap(){
+  function ms(ico,lbl,cur,goal){
+    const pct=goal>0?Math.min(100,(cur/goal)*100):0;
+    const done=pct>=100;
+    const fc=done?'fl':pct>=60?'gr':pct>=30?'':pct>=10?'am':'rd';
+    return `<div class="rmi">
+      <span class="rmico">${ico}</span>
+      <div class="rmb">
+        <div class="rml${done?' dn':''}">${lbl}</div>
+        <div class="rmm">${M(cur)} / ${M(goal)}</div>
+        <div class="pb" style="margin-top:4px">
+          <div class="pf ${fc}" style="width:${pct.toFixed(1)}%"></div>
+        </div>
+      </div>
+      <div class="rmr">
+        <div class="rmpct">${pct.toFixed(0)}%</div>
+      </div>
+    </div>`;
+  }
+  const dd=D.daniel,ss=D.sonia;
+  return `<div class="g">
+    <div class="card s12">
+      <h2>Financial Roadmap</h2>
+      ${ms('📦','Move Fund Complete',LS.n('b:s0',dd.savings[0].bal),LS.n('g:s0',dd.savings[0].goal))}
+      ${ms('💰','Daniel Emergency Fund',LS.n('b:s1',dd.savings[1].bal),LS.n('g:s1',dd.savings[1].goal))}
+      ${ms('💰','Sonia Savings Goal',LS.n('b:f0',ss.savings[0].bal),LS.n('g:f0',ss.savings[0].goal))}
+      ${ms('💳','NFCU Visa Paid Off',dd.debts[0].bal-LS.n('b:d0',dd.debts[0].bal),dd.debts[0].bal)}
+      ${ms('🏦','NW Loan Paid Off',ss.debts[0].bal-LS.n('b:e0',ss.debts[0].bal),ss.debts[0].bal)}
+      ${ms('👨‍👩‍👧','Family Debt Cleared',ss.debts[1].bal-LS.n('b:e1',ss.debts[1].bal),ss.debts[1].bal)}
+      ${ms('🚗','Vehicle Loan Paid Off',dd.debts[1].bal-LS.n('b:d1',dd.debts[1].bal),dd.debts[1].bal)}
+      ${ms('📈','Begin Investing',0,1)}
+    </div>
+  </div>`;
+}
+
+function buildInvesting(){
+  function calc(mo,rate,yrs){
+    const r=rate/100/12,n=yrs*12;
+    return r>0?mo*((Math.pow(1+r,n)-1)/r):mo*n;
+  }
+  function html(mo,rate,yrs){
+    const fv=calc(mo,rate,yrs),contrib=mo*yrs*12,growth=fv-contrib;
+    return `<div class="cres">
+      <div class="cst"><span class="csv">${M(fv)}</span><span class="csl">End Value</span></div>
+      <div class="cst"><span class="csv" style="color:var(--ink2)">${M(contrib)}</span><span class="csl">Contributed</span></div>
+      <div class="cst"><span class="csv" style="color:var(--purple)">${M(growth)}</span><span class="csl">Market Growth</span></div>
+    </div>
+    <div class="cproj">
+      ${[10,20,30].map(y=>`<div class="cpj"><span class="cpv">${M(calc(mo,rate,y))}</span><span class="cpl">${y} years</span></div>`).join('')}
+    </div>`;
+  }
+  return `<div class="g">
+    <div class="card s12">
+      <h2>Compound Growth Calculator</h2>
+      <p class="snote" style="margin-bottom:10px">Shows what consistent investing builds over time. Updates live.</p>
+      <div class="cins">
+        <label>Monthly Contribution<input type="number" id="ci-mo" value="200" step="25"/></label>
+        <label>Annual Return %<input type="number" id="ci-rate" value="7" step=".5"/></label>
+        <label>Years<input type="number" id="ci-yrs" value="10" step="1"/></label>
+      </div>
+      <div id="calc-out">${html(200,7,10)}</div>
+    </div>
+    <div class="card s12">
+      <h2>Personal Investing Projection</h2>
+      <p class="snote" style="margin-bottom:10px">Once Visa is gone, $700/mo frees up. This shows what happens if you invest half of that starting then.</p>
+      <div class="tip"><strong>Scenario: Post-Visa Freedom</strong>
+        Visa gone ≈ late 2027. Starting $350/mo at 7%:
+        <div class="cproj" style="margin-top:10px">
+          ${[5,10,20].map(y=>`<div class="cpj"><span class="cpv">${M(calc(350,7,y))}</span><span class="cpl">${y} years</span></div>`).join('')}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function buildAllocator(){
+  const allocs=[
+    {name:'Bills (Daniel share)',    pct:null, fixed:768,  editable:false},
+    {name:'Visa payment',            pct:null, fixed:700,  editable:true },
+    {name:'Vehicle loan',            pct:null, fixed:426,  editable:true },
+    {name:'Move / Emergency savings',pct:null, fixed:300,  editable:true },
+    {name:'Gas / transport',         pct:null, fixed:175,  editable:true },
+    {name:'Food & personal',         pct:null, fixed:150,  editable:true },
+    {name:'Buffer / discretionary',  pct:null, fixed:0,    editable:false},
+  ];
+  const income=D.daniel.income;
+  const assigned=allocs.slice(0,-1).reduce((a,b)=>a+(b.fixed||0),0);
+  const buffer=Math.max(0,income-assigned);
+  allocs[allocs.length-1].fixed=buffer;
+  return `<div class="g">
+    <div class="card s12">
+      <h2>Paycheck Allocator</h2>
+      <p class="snote" style="margin-bottom:12px">Edit amounts to build a custom allocation from any paycheck. Remaining updates live.</p>
+      <div class="paloc" id="paloc-wrap">
+        ${allocs.map((a,i)=>`
+        <div class="parow" data-alloc="${i}">
+          <span class="pan">${a.name}</span>
+          ${a.editable
+            ?`<input type="number" step="5" min="0" class="painp pav" data-ai="${i}" value="${a.fixed}"/>`
+            :`<span class="pav pv">${M(a.fixed)}</span>`
+          }
+        </div>`).join('')}
+      </div>
+      <div class="paremain">
+        <span>Income</span><strong class="pv">${M(income)}</strong>
+      </div>
+      <div class="paremain" style="padding-top:4px">
+        <span>Assigned</span><strong class="pv" id="pa-assigned">${M(assigned+buffer)}</strong>
+      </div>
+      <div class="paremain" style="color:var(--green2)">
+        <span>Unassigned</span><strong class="pv good" id="pa-remain">${M(0)}</strong>
+      </div>
+    </div>
+  </div>`;
+}
+
+function buildQuarterly(){
+  const qItems=[
+    'Overdrafts are $0 for the quarter.',
+    'Daniel NFCU Visa has $0 new charges.',
+    'Daniel Visa balance fell every month.',
+    'Sonia family debt payment made every month.',
+    'Sonia NW loan current or accelerated.',
+    'Emergency savings increased.',
+    'Shared bills split correctly 59/41.',
+    'Subscriptions did not creep back.',
+    'All spending caps honored.',
+    'Net worth improved quarter over quarter.',
+    'Old address obligations fully closed.',
+    'Investing started only after all triggers met.',
+  ];
+  const triggers=[
+    ['Daniel',    'Visa paid off, $1K+ emergency fund, no new charges 90 days','$50–$150/mo'],
+    ['Sonia',     '$2,500 savings, no overdrafts 90 days, family debt below $5K','$50–$150/mo'],
+    ['Household', 'Both current, shared bills stable, no legacy bills','Review quarterly'],
+  ];
+  return `<div class="g">
+    <div class="card s6">
+      <h2>Quarterly Review Checklist</h2>
+      ${buildChecklist('quarterly',qItems)}
+    </div>
+    <div class="card s6">
+      <h2>Investing Triggers</h2>
+      ${tbl(['Person','Condition','Start'],triggers,'Triggers')}
+      <div class="ok" style="margin-top:10px">
+        <strong>Post-debt life</strong>
+        Once all debt is gone: combined ~$1,400+/mo freed up. Split between Roth IRAs ($500 each), brokerage ($200+), and lifestyle buffer.
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ── SETTINGS ────────────────────────────────────────────────── */
+function renderSettings(){
+  $('#tab-settings').innerHTML=`<div class="g">
+    <div class="card s12">
+      <h2>Monthly Net Worth Snapshot</h2>
+      <p class="snote" style="margin-bottom:10px">Tap once a month. Captures current debt and savings slider values automatically — no re-entry.</p>
+      <button class="bp" id="snap-btn">Record Snapshot</button>
+      <div id="snap-log" style="margin-top:12px">${buildSnapLog()}</div>
+    </div>
+    <div class="ssec s6" style="background:var(--s1);border:1px solid var(--bsoft);border-radius:11px;padding:15px">
+      <h3 style="font-size:.7rem;text-transform:uppercase;letter-spacing:.09em;color:var(--ink3);margin-bottom:11px;padding-bottom:8px;border-bottom:1px solid var(--bsoft)">APRs</h3>
+      ${[...D.daniel.debts,...D.sonia.debts].map(d=>`
+        <div class="srow"><label>${d.name}</label>
+          <input type="number" step=".01" class="sinp" data-apr="${d.id}" value="${d.apr}"/>
+          <span class="sunit">%</span>
+        </div>`).join('')}
+    </div>
+    <div class="ssec s6" style="background:var(--s1);border:1px solid var(--bsoft);border-radius:11px;padding:15px">
+      <h3 style="font-size:.7rem;text-transform:uppercase;letter-spacing:.09em;color:var(--ink3);margin-bottom:11px;padding-bottom:8px;border-bottom:1px solid var(--bsoft)">Export / Import</h3>
+      <div class="bgrp">
+        <button class="bp" id="exp-json">Export JSON</button>
+        <button class="bs" id="exp-csv">Export CSV</button>
+      </div>
+      <label style="display:grid;gap:4px;font-size:.78rem;font-weight:600;color:var(--ink3);margin-top:12px">Import JSON
+        <input type="file" id="imp-file" accept=".json"/>
+      </label>
+      <button class="bg" style="margin-top:7px" id="imp-btn">Restore</button>
+      <p id="imp-status" style="font-size:.79rem;margin-top:6px"></p>
+      <pre class="expbox" id="expbox"></pre>
+    </div>
+    <div class="card s12 dzone">
+      <h2 style="color:var(--red2)">Danger Zone</h2>
+      <p class="snote" style="margin-bottom:10px">Clears all saved slider values, wallet amounts, and snapshots from this device.</p>
+      <button class="bd" id="rst-all">Clear All Progress</button>
+    </div>
+  </div>`;
+  bindSettings();
+}
+
+function buildSnapLog(){
+  const log=LS.g('nwlog',[]);
+  if(!log.length)return '<p class="snote">No snapshots yet.</p>';
+  return log.slice(0,8).map((e,i)=>{
+    const prev=log[i+1];
+    const delta=prev?e.nw-prev.nw:null;
+    const dhtml=delta!==null?`<span class="nwdelta ${delta>=0?'up':'dn'}">${delta>=0?'+':''}${M(delta)}</span>`:'';
+    return `<div class="logentry">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <strong>${e.date}</strong>
+        <span class="nwv ${e.nw>=0?'pos':'neg'} pv">${M(e.nw)} ${dhtml}</span>
+      </div>
+      <div class="logrow">
+        <span>Debt: ${M(e.debt)}</span>
+        <span>Assets: ${M(e.liquid)}</span>
+        <span>Burn: ${M(e.burn)}/mo</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function bindSettings(){
+  $('#snap-btn').addEventListener('click',()=>{
+    const t=totals();
+    const log=LS.g('nwlog',[]);
+    log.unshift({date:new Date().toLocaleDateString(),debt:t.debt,liquid:t.liquid,nw:t.nw,burn:t.burn});
+    if(log.length>36)log.splice(36);
+    LS.s('nwlog',log);
+    const el=$('#snap-log');if(el)el.innerHTML=buildSnapLog();
+    updNWSnippet();
+    touchSaved();
+  });
+  $('#exp-json').addEventListener('click',()=>{
+    const data={};
+    ['b:','g:','w:','ck:','cs:','cl:','p:','st:'].forEach(p=>LS.ks(p).forEach(k=>{data[k]=LS.g(k);}));
+    data.nwlog=LS.g('nwlog',[]);
+    const j=JSON.stringify(data,null,2);
+    dlFile(`gj-${ds()}.json`,j,'application/json');
+    const box=$('#expbox');if(box){box.textContent=j;box.style.display='block';}
+  });
+  $('#exp-csv').addEventListener('click',()=>{
+    const rows=[['Key','Value','Date']],now=new Date().toISOString();
+    ['b:','g:','w:','ck:','cs:','cl:','p:'].forEach(p=>LS.ks(p).forEach(k=>rows.push([k,JSON.stringify(LS.g(k)),now])));
+    dlFile(`gj-${ds()}.csv`,rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n'),'text/csv');
+  });
+  $('#imp-btn').addEventListener('click',()=>{
+    const file=$('#imp-file').files[0],status=$('#imp-status');
+    if(!file){status.textContent='⚠️ Select a JSON file first.';return;}
+    const reader=new FileReader();
+    reader.onload=e=>{
+      try{
+        const data=JSON.parse(e.target.result);let n=0;
+        Object.entries(data).forEach(([k,v])=>{
+          if(['b:','g:','w:','ck:','cs:','cl:','p:','st:'].some(p=>k.startsWith(p))||k==='nwlog')
+          {LS.s(k,v);n++;}
+        });
+        status.textContent=`✅ Imported ${n} items. Reloading…`;
+        setTimeout(()=>location.reload(),1200);
+      }catch{status.textContent='❌ Invalid file.';}
+    };
+    reader.readAsText(file);
+  });
+  $('#rst-all').addEventListener('click',()=>{
+    if(!confirm('Clear all progress data? This cannot be undone.'))return;
+    ['b:','g:','w:','ck:','cs:','cl:','p:','st:'].forEach(p=>LS.ks(p).forEach(k=>LS.rm(k)));
+    LS.rm('nwlog');LS.rm('lastUpdated');location.reload();
+  });
+}
+
+/* ── EVENT DELEGATION ────────────────────────────────────────── */
+function initEvents(){
+  /* Main tab switching */
+  $$('.tab').forEach(t=>{
+    t.addEventListener('click',()=>{
+      $$('.tab').forEach(x=>{x.classList.remove('active');x.setAttribute('aria-selected','false');});
+      $$('.panel').forEach(p=>p.classList.remove('active'));
+      t.classList.add('active');t.setAttribute('aria-selected','true');
+      $(`#tab-${t.dataset.tab}`).classList.add('active');
+    });
+    t.addEventListener('keydown',e=>{
+      const tabs=$$('.tab'),i=tabs.indexOf(t);
+      if(e.key==='ArrowRight'){e.preventDefault();tabs[(i+1)%tabs.length].focus();}
+      if(e.key==='ArrowLeft') {e.preventDefault();tabs[(i-1+tabs.length)%tabs.length].focus();}
+    });
+  });
+
+  /* Sub-tab switching */
+  document.addEventListener('click',e=>{
+    if(!e.target.matches('.stab'))return;
+    const person=e.target.dataset.person,st=e.target.dataset.st;
+    LS.s(`st:${person}`,st);
+    $$(`.stab`).filter(b=>b.dataset.person===person).forEach(b=>b.classList.remove('active'));
+    e.target.classList.add('active');
+    const bodyMap={daniel:'#d-body',sonia:'#s-body',planning:'#p-body'};
+    const tabFnMap={daniel:renderDanielTab,sonia:renderSoniaTab,planning:renderPlanningTab};
+    const body=$(bodyMap[person]);
+    if(body){body.innerHTML=tabFnMap[person](st);if(st==='investing')bindCalc();}
+  });
+
+  /* Reset caps */
+  document.addEventListener('click',e=>{
+    if(e.target.id==='rst-dcaps'){LS.ks('cs:c').forEach(k=>LS.rm(k));renderDaniel();}
+    if(e.target.id==='rst-scaps'){LS.ks('cs:g').forEach(k=>LS.rm(k));renderSonia();}
+  });
+
+  /* Checklists */
+  document.addEventListener('change',e=>{
+    if(!e.target.matches('[data-ckl]'))return;
+    const {ckl,cki}=e.target.dataset;
+    const saved=LS.g(`ck:${ckl}`,{});
+    saved[cki]=e.target.checked;
+    LS.s(`ck:${ckl}`,saved);
+    e.target.closest('.cr').classList.toggle('dn',e.target.checked);
+    const boxes=$$(`[data-ckl="${ckl}"]`),s=$(`#cks-${ckl}`);
+    if(s)s.textContent=`${boxes.filter(b=>b.checked).length} of ${boxes.length} complete`;
+    touchSaved();
+  });
+
+  /* Slider range */
+  document.addEventListener('input',e=>{
+    if(e.target.matches('.sr')){
+      const wrap=e.target.closest('[data-sid]');if(!wrap)return;
+      const id=wrap.dataset.sid,type=wrap.dataset.stype;
+      const gEl=$('#sg-'+id);
+      const goal=gEl?parseFloat(gEl.value)||0:0;
+      const rv=parseFloat(e.target.value);
+      const cur=type==='debt'?Math.max(0,goal-rv):rv;
+      LS.s(`b:${id}`,cur);touchSaved();
+      updSlider(id,type,cur,goal);
+    }
+    /* Wallet */
+    if(e.target.matches('[data-w]')){
+      const p=e.target.dataset.w,wt=e.target.dataset.wt;
+      localStorage.setItem(`w:${p}:${wt}`,parseFloat(e.target.value)||0);
+      const c=LS.n(`w:${p}:c`,0),sv=LS.n(`w:${p}:s`,0);
+      const el=$(`#wt-${p}`);if(el)el.textContent=M(c+sv);
+      updHeroStats();touchSaved();
+    }
+    /* Cap spent */
+    if(e.target.matches('[data-csp]')){
+      const id=e.target.dataset.csp;
+      localStorage.setItem(`cs:${id}`,parseFloat(e.target.value)||0);
+      const lim=LS.n(`cl:${id}`,0);
+      updCap(id,parseFloat(e.target.value)||0,lim);touchSaved();
+    }
+    /* Payoff monthly payment */
+    if(e.target.matches('[data-pmt]')){
+      const id=e.target.dataset.pmt;
+      const val=parseFloat(e.target.value)||0;
+      LS.s(`p:${id}`,val);
+      updPayoffEst(id);touchSaved();
+    }
+    /* Bill split */
+    if(e.target.matches('[data-bsplit]')){
+      const name=e.target.dataset.bsplit;
+      const val=parseFloat(e.target.value)||0;
+      const dEl=$(`#bsd-${name}`),sEl=$(`#bss-${name}`);
+      if(dEl)dEl.textContent=M(val*0.59);
+      if(sEl)sEl.textContent=M(val*0.41);
+      // update total
+      let tot=0;
+      $$('[data-bsplit]').forEach(inp=>tot+=parseFloat(inp.value)||0);
+      const tdEl=$('#bsd-Total'),tsEl=$('#bss-Total');
+      if(tdEl)tdEl.textContent=M(tot*0.59);
+      if(tsEl)tsEl.textContent=M(tot*0.41);
+    }
+    /* Paycheck allocator */
+    if(e.target.matches('[data-ai]')){
+      let total=0;
+      $$('[data-ai]').forEach(inp=>total+=parseFloat(inp.value)||0);
+      // add fixed items
+      $$('.paloc .parow').forEach(row=>{
+        if(!row.querySelector('[data-ai]')){
+          const vEl=row.querySelector('.pav');
+          if(vEl){const m=vEl.textContent.replace(/[$,]/g,'');total+=parseFloat(m)||0;}
+        }
+      });
+      const assigned=$('#pa-assigned'),remain=$('#pa-remain');
+      const income=D.daniel.income;
+      if(assigned)assigned.textContent=M(total);
+      if(remain){remain.textContent=M(Math.max(0,income-total));remain.className=`pv ${income-total<0?'bad':'good'}`;}
+    }
+  });
+
+  /* Slider balance & goal direct edit */
+  document.addEventListener('change',e=>{
+    if(e.target.matches('[data-sbal]')){
+      const id=e.target.dataset.sbal,type=e.target.dataset.stype;
+      const cur=parseFloat(e.target.value)||0;
+      const gEl=$('#sg-'+id);
+      const goal=gEl?parseFloat(gEl.value)||0:0;
+      LS.s(`b:${id}`,cur);touchSaved();
+      updSlider(id,type,cur,goal);
+    }
+    if(e.target.matches('[data-sgoal]')){
+      const id=e.target.dataset.sgoal,type=e.target.dataset.stype;
+      const goal=parseFloat(e.target.value)||1;
+      LS.s(`g:${id}`,goal);
+      const bEl=$('#sb-'+id);
+      const cur=bEl?parseFloat(bEl.value)||0:LS.n(`b:${id}`,0);
+      const rng=$('#sr-'+id);
+      if(rng){rng.max=goal;rng.value=type==='debt'?Math.max(0,goal-cur):cur;}
+      updSlider(id,type,cur,goal);touchSaved();
+    }
+    /* Cap limit */
+    if(e.target.matches('[data-clm]')){
+      const id=e.target.dataset.clm;
+      localStorage.setItem(`cl:${id}`,parseFloat(e.target.value)||0);
+      const spEl=$('#csp-'+id);
+      updCap(id,spEl?parseFloat(spEl.value)||0:0,parseFloat(e.target.value)||0);
+      touchSaved();
+    }
+  });
+
+  /* Header buttons */
+  $('#printBtn').addEventListener('click',()=>window.print());
+  $('#rstBtn').addEventListener('click',()=>{
+    if(!confirm('Clear all saved progress?'))return;
+    ['b:','g:','w:','ck:','cs:','cl:','p:','st:'].forEach(p=>LS.ks(p).forEach(k=>LS.rm(k)));
+    LS.rm('nwlog');LS.rm('lastUpdated');location.reload();
+  });
+}
+
+/* ── Compound calc live binding ──────────────────────────────── */
+function bindCalc(){
+  function run(){
+    const mo=parseFloat($('#ci-mo')?.value)||0;
+    const rate=parseFloat($('#ci-rate')?.value)||0;
+    const yrs=parseFloat($('#ci-yrs')?.value)||0;
+    function c(m,r,y){const mr=r/100/12,n=y*12;return mr>0?m*((Math.pow(1+mr,n)-1)/mr):m*n;}
+    const fv=c(mo,rate,yrs),contrib=mo*yrs*12,growth=fv-contrib;
+    const out=$('#calc-out');if(!out)return;
+    out.innerHTML=`<div class="cres">
+      <div class="cst"><span class="csv">${M(fv)}</span><span class="csl">End Value</span></div>
+      <div class="cst"><span class="csv" style="color:var(--ink2)">${M(contrib)}</span><span class="csl">Contributed</span></div>
+      <div class="cst"><span class="csv" style="color:var(--purple)">${M(growth)}</span><span class="csl">Market Growth</span></div>
+    </div>
+    <div class="cproj">${[10,20,30].map(y=>`<div class="cpj"><span class="cpv">${M(c(mo,rate,y))}</span><span class="cpl">${y} yrs</span></div>`).join('')}</div>`;
+  }
+  ['#ci-mo','#ci-rate','#ci-yrs'].forEach(s=>{const el=$(s);if(el)el.addEventListener('input',run);});
+}
+
+/* ── Privacy ─────────────────────────────────────────────────── */
+function initPrivacy(){
+  const btn=$('#privBtn');if(!btn)return;
+  const on=LS.g('pm',false);
+  applyPM(on,btn);
+  btn.addEventListener('click',()=>{const n=!document.body.classList.contains('pm');LS.s('pm',n);applyPM(n,btn);});
+}
+function applyPM(on,btn){
+  document.body.classList.toggle('pm',on);
+  btn.setAttribute('aria-pressed',String(on));
+  // swap pv→private-value via class toggle
+  document.querySelectorAll('.pv').forEach(el=>el.classList.toggle('private-value',on));
+}
+
+/* ── lastUpdated ─────────────────────────────────────────────── */
+function touchSaved(){LS.s('lastUpdated',new Date().toISOString());refreshSaved();}
+function refreshSaved(){
+  const ts=LS.g('lastUpdated',null),el=$('#ludisp');if(!el)return;
+  if(ts){const d=new Date(ts);el.textContent=`Saved ${d.toLocaleDateString()} ${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`;}
+}
+
+/* ── Utilities ───────────────────────────────────────────────── */
+function ds(){return new Date().toISOString().slice(0,10);}
+function dlFile(name,content,mime){
+  const b=new Blob([content],{type:mime}),u=URL.createObjectURL(b);
+  const a=document.createElement('a');a.href=u;a.download=name;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);
+}
+
+/* ── Boot ────────────────────────────────────────────────────── */
+function init(){
+  initAuth();
+  renderDashboard();
+  renderDaniel();
+  renderSonia();
+  renderHousehold();
+  renderPlanning();
+  renderSettings();
+  initEvents();
+  initPrivacy();
+  refreshSaved();
+}
+init();
+</script>
 </body>
 </html>
