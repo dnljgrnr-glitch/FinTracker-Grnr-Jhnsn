@@ -1,18 +1,89 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FinTracker — Garner-Johnson</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#111827" />
+  <meta name="description" content="Private household financial plan tracker for Garner-Johnson." />
+  <title>Garner-Johnson Financial Tracker</title>
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
-  <div id="app">
-    <nav id="nav"></nav>
-    <main id="body"></main>
+
+  <!-- Skip navigation for keyboard/screen-reader users -->
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <!-- ─── Login overlay ─── -->
+  <div id="login" class="login-screen" role="dialog" aria-modal="true" aria-labelledby="loginHeading">
+    <form class="login-card" id="loginForm" novalidate>
+      <p class="eyebrow" aria-hidden="true">Private Household Tool</p>
+      <h1 id="loginHeading">Financial Plan Tracker</h1>
+      <p>Enter the passcode to open the execution dashboard.</p>
+      <div class="field-group">
+        <label for="passwordInput">Passcode</label>
+        <input
+          id="passwordInput"
+          type="password"
+          placeholder="Enter passcode"
+          autocomplete="current-password"
+          aria-required="true"
+          aria-describedby="loginError loginNote"
+        />
+      </div>
+      <button type="submit" class="btn-primary full-width">Unlock Dashboard</button>
+      <p id="loginError" class="error" role="alert" aria-live="assertive"></p>
+      <p id="loginNote" class="fine-print">
+        ⚠️ Client-side passcode only — not bank-grade security.
+        Do not store account numbers, SSNs, or full credentials in this app.
+      </p>
+    </form>
   </div>
+
+  <!-- ─── App header ─── -->
+  <header class="app-header" role="banner">
+    <div class="header-text">
+      <p class="eyebrow">June 2026 Execution Plan</p>
+      <h1>Garner-Johnson Tracker</h1>
+      <p class="subtitle">Paycheck allocation · debt payoff · savings · quarterly review</p>
+    </div>
+    <div class="header-actions" role="toolbar" aria-label="App controls">
+      <span id="lastUpdatedDisplay" class="last-updated" aria-live="polite"></span>
+      <button id="privacyBtn" class="btn-secondary" aria-pressed="false" title="Toggle privacy mode">
+        <span aria-hidden="true">👁</span>
+        <span class="btn-label">Hide $</span>
+      </button>
+      <a class="btn-secondary" href="docs/Garner_Johnson_Financial_Execution_Package_v3.pdf" target="_blank" rel="noopener" aria-label="Open PDF report in new tab">PDF</a>
+      <button id="printBtn" class="btn-secondary" aria-label="Print this page">Print</button>
+      <button id="resetBtn" class="btn-danger" aria-label="Reset all saved progress data">Reset</button>
+      <button id="lockBtn" class="btn-secondary" aria-label="Lock app and return to passcode screen">Lock</button>
+    </div>
+  </header>
+
+  <!-- ─── Tab navigation ─── -->
+  <nav class="tabs" aria-label="Financial tracker sections" role="tablist">
+    <button class="tab active" role="tab" aria-selected="true"  aria-controls="dashboard" data-target="dashboard">Dashboard</button>
+    <button class="tab"        role="tab" aria-selected="false" aria-controls="daniel"    data-target="daniel">Daniel</button>
+    <button class="tab"        role="tab" aria-selected="false" aria-controls="sonia"     data-target="sonia">Sonia</button>
+    <button class="tab"        role="tab" aria-selected="false" aria-controls="household" data-target="household">Household</button>
+    <button class="tab"        role="tab" aria-selected="false" aria-controls="review"    data-target="review">Review</button>
+    <button class="tab"        role="tab" aria-selected="false" aria-controls="settings"  data-target="settings">Settings</button>
+  </nav>
+
+  <!-- ─── Main content ─── -->
+  <main id="main-content">
+    <section id="dashboard" class="panel active" role="tabpanel" aria-labelledby="tab-dashboard" tabindex="-1"></section>
+    <section id="daniel"    class="panel"        role="tabpanel" aria-labelledby="tab-daniel"    tabindex="-1"></section>
+    <section id="sonia"     class="panel"        role="tabpanel" aria-labelledby="tab-sonia"     tabindex="-1"></section>
+    <section id="household" class="panel"        role="tabpanel" aria-labelledby="tab-household" tabindex="-1"></section>
+    <section id="review"    class="panel"        role="tabpanel" aria-labelledby="tab-review"    tabindex="-1"></section>
+    <section id="settings"  class="panel"        role="tabpanel" aria-labelledby="tab-settings"  tabindex="-1"></section>
+  </main>
+
+  <footer role="contentinfo">
+    <p>Operating rule: <strong>every paycheck is assigned before spending starts.</strong></p>
+    <p class="fine-print">Static app — no data leaves this device. Progress stored in localStorage only.</p>
+  </footer>
+
   <script src="js/financeData.js"></script>
   <script src="js/app.js"></script>
 </body>
