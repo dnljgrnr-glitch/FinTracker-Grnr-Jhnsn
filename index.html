@@ -286,6 +286,8 @@
     .modalish{border-radius:var(--r-large);background:var(--elev);border:1px solid var(--border);padding:16px}
     .footer-note{max-width:var(--max);margin:0 auto 30px;padding:0 16px;color:var(--tertiary)}
     .hidden-file{display:none}
+    .toastbox{position:fixed;right:16px;bottom:16px;z-index:1200;display:grid;gap:8px}
+    .toast{max-width:320px;background:var(--elev);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);padding:10px 12px;color:#fff;transition:opacity .2s, transform .2s}
     @media(max-width:900px){
       .header-inner{align-items:flex-start;flex-direction:column}
       .header-actions{justify-content:flex-start}
@@ -329,12 +331,12 @@
       <h1 id="loginTitle">Financial Planner</h1>
       <p>Enter the passcode to open the execution tracker.</p>
       <div class="field">
-        <label for="passInput">Passcode</label>
-        <input id="passInput" type="password" autocomplete="current-password" placeholder="Enter passcode" />
+        <label for="passwordInput">Passcode</label>
+        <input id="passwordInput" type="password" autocomplete="current-password" placeholder="Enter passcode" />
       </div>
       <div style="height:12px"></div>
       <button class="btn primary" type="submit" style="width:100%">Unlock</button>
-      <p id="loginErr" class="fine red" role="alert" aria-live="assertive"></p>
+      <p id="loginError" class="fine red" role="alert" aria-live="assertive"></p>
       <p class="fine">Client-side passcode only. Do not store account numbers, SSNs, bank logins, tax documents, or credentials.</p>
     </form>
   </div>
@@ -375,6 +377,8 @@
     <section id="settings" class="panel" role="tabpanel"></section>
   </main>
 
+  <div id="toastbox" class="toastbox" aria-live="polite"></div>
+
   <p class="footer-note fine">Static single-file app. All progress is stored in this browser using localStorage. No account numbers or sensitive credentials are stored.</p>
 
   <script>
@@ -400,6 +404,15 @@
         {id:'dfood', label:'Food & Personal', cap:150},
         {id:'dff', label:'Fast Food', cap:60},
         {id:'donline', label:'Online Shopping', cap:50}
+      ],
+      budget:[
+        ['Housing / shared bills',768,'Protect first'],
+        ['NFCU Visa',452.82,'Minimum plus extra when cash stable'],
+        ['Vehicle',426.20,'Keep current'],
+        ['Gas',175,'Hard cap'],
+        ['Food & Personal',150,'Cash discipline'],
+        ['Fast Food',60,'Leakage control'],
+        ['Online Shopping',50,'Needs approval before spend']
       ],
       paychecks:[
         ['Jun 5','Move fund push','Fund transfer/checking cushion','Assign before discretionary spending'],
@@ -438,6 +451,15 @@
         {id:'sff', label:'Fast Food', cap:60},
         {id:'samazon', label:'Amazon', cap:50},
         {id:'sapplecash', label:'Apple Cash', cap:50}
+      ],
+      budget:[
+        ['Shared bills',534,'Pay before discretionary spending'],
+        ['NW Bank Loan',135.83,'Minimum first, extra after cash floor'],
+        ['Family Debt',200,'Relationship preservation priority'],
+        ['Beauty','75-100','Monthly ceiling'],
+        ['Fast Food',60,'Hard cap'],
+        ['Amazon',50,'No impulse orders'],
+        ['Apple Cash',50,'Named-purpose transfers only']
       ],
       paychecks:[
         ['Next check','Stabilize','Move $100 to Apple Savings, pay NW minimum, reserve food/gas','Reach $1,000 cash floor'],
@@ -532,6 +554,16 @@
   function sliderGoal(id, fallback){return Number(jget(goalKey(id), fallback));}
   function payment(id, fallback){return Number(jget(pmtKey(id), fallback));}
   function billAmount(id, fallback){return Number(jget('bill:'+id, fallback));}
+  function income(person){return Number(jget('inc:'+person, D[person].income));}
+  function toast(msg){
+    const box=$('#toastbox'); if(!box) return;
+    const d=document.createElement('div'); d.className='toast'; d.textContent=msg; box.appendChild(d);
+    setTimeout(()=>{d.style.opacity='0';d.style.transform='translateY(4px)';},1800);
+    setTimeout(()=>d.remove(),2300);
+  }
+  function incomeEditors(){
+    return `<div class="grid two"><div class="field"><label>Daniel Monthly Income</label><input data-income="daniel" type="number" step="0.01" value="${income('daniel')}"></div><div class="field"><label>Sonia Monthly Income</label><input data-income="sonia" type="number" step="0.01" value="${income('sonia')}"></div></div>`;
+  }
 
   function totals(){
     const debts = allDebts().reduce((s,d)=>s + currentDebt(d.id),0);
@@ -656,6 +688,21 @@
       </div>
       <div class="grid two">
         <div class="card stack">
+          <h2>Household Snapshot</h2>
+          ${incomeEditors()}
+          <div class="row"><span>Combined Income</span><strong id="combined-income" class="pv">—</strong></div>
+          <div class="row"><span>Shared Bill Total</span><strong id="shared-total" class="pv">—</strong></div>
+          <div class="row"><span>Daniel Share</span><strong id="shared-d" class="pv">—</strong></div>
+          <div class="row"><span>Sonia Share</span><strong id="shared-s" class="pv">—</strong></div>
+        </div>
+        <div class="card stack">
+          <h2>Wallets</h2>
+          <div class="grid two">
+            <div class="slider-box stack"><h3>Daniel</h3>${walletInputs('daniel')}<div class="row"><span>Total</span><strong id="wt-daniel" class="green pv">—</strong></div></div>
+            <div class="slider-box stack"><h3>Sonia</h3>${walletInputs('sonia')}<div class="row"><span>Total</span><strong id="wt-sonia" class="green pv">—</strong></div></div>
+          </div>
+        </div>
+        <div class="card stack">
           <div class="row"><h2>Move Fund Countdown</h2><span class="pill blue" id="move-days">—</span></div>
           <div class="bar"><div id="move-fill" class="fill green"></div></div>
           <div class="grid four">
@@ -671,32 +718,16 @@
           <div class="row"><strong>Live Total</strong><strong id="dash-burn" class="red pv">—</strong></div>
         </div>
         <div class="card stack">
-          <h2>Daniel Wallet</h2>
-          ${walletInputs('daniel')}
-          <div class="row"><span>Total</span><strong id="wt-daniel" class="green pv">—</strong></div>
-        </div>
-        <div class="card stack">
-          <h2>Sonia Wallet</h2>
-          ${walletInputs('sonia')}
-          <div class="row"><span>Total</span><strong id="wt-sonia" class="green pv">—</strong></div>
-        </div>
-        <div class="card stack">
-          <h2>Household Snapshot</h2>
-          <div class="row"><span>Combined Income</span><strong class="pv">${money(D.daniel.income + D.sonia.income)}</strong></div>
-          <div class="row"><span>Shared Bill Total</span><strong id="shared-total" class="pv">—</strong></div>
-          <div class="row"><span>Daniel Share</span><strong id="shared-d" class="pv">—</strong></div>
-          <div class="row"><span>Sonia Share</span><strong id="shared-s" class="pv">—</strong></div>
-        </div>
-        <div class="card stack">
           <h2>Savings Rate</h2>
           <div id="saving-rate-rows" class="stack"></div>
         </div>
-        <div class="card stack" style="grid-column:1/-1">
+        <div class="card stack">
           <div class="row wrap"><h2>Net Worth History</h2><button class="btn small primary" type="button" data-snap="1">Capture Snapshot</button></div>
           <div id="nw-history" class="stack fine"></div>
         </div>
       </div>`;
   }
+
 
   function walletInputs(person){
     return `
@@ -709,13 +740,15 @@
   function renderPerson(person){
     const p = D[person];
     const remembered = jget('st:'+person,'snapshot');
+    const tabs = ['snapshot','spending','budget','paychecks','checklist'];
     $('#'+person).innerHTML = `
       <div class="subtabs" data-person="${person}">
-        ${['snapshot','spending','paychecks','checklist'].map(x=>`<button class="subtab ${x===remembered?'active':''}" data-sub="${person}:${x}">${cap(x)}</button>`).join('')}
+        ${tabs.map(x=>`<button class="subtab ${x===remembered?'active':''}" data-sub="${person}:${x}">${cap(x)}</button>`).join('')}
       </div>
       <div id="${person}-body"></div>`;
     renderPersonSub(person,remembered);
   }
+
 
   function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
   function renderPersonSub(person,sub){
@@ -735,9 +768,11 @@
         <div class="card stack">
           <div class="row wrap"><h2>Monthly Spending Caps</h2><button class="btn small secondary" data-reset-caps="${person}" type="button">Reset Month</button></div>
           ${p.caps.map(c=>capRow(c)).join('')}
-        </div>
-        <div class="card stack" style="margin-top:12px"><h2>Budget Reference</h2>${budgetTable(person)}</div>`;
+        </div>`;
       p.caps.forEach(c=>updCap(c.id));
+    }
+    if(sub==='budget'){
+      body.innerHTML = `<div class="card stack"><h2>${p.name} Monthly Category Tracker</h2><p class="fine">Use these as ceilings. Every paycheck gets assigned before spending starts.</p>${budgetTable(person)}</div>`;
     }
     if(sub==='paychecks'){
       body.innerHTML = `<div class="card stack"><h2>${p.name} Paycheck Plan</h2>${simpleTable(['Date/Phase','Priority','Allocation','Rule'],p.paychecks)}</div>`;
@@ -747,6 +782,7 @@
       updChecklist(person);
     }
   }
+
 
   function capRow(c){
     const spent = Number(jget(capSpentKey(c.id),0));
@@ -776,8 +812,10 @@
 
   function budgetTable(person){
     const p = D[person];
-    return simpleTable(['Category','Cap','Operating Rule'], p.caps.map(c=>[c.label,money(Number(jget(capLimitKey(c.id),c.cap))),'Spend only after paycheck assignment']));
+    const rows = (p.budget || p.caps.map(c=>[c.label, Number(jget(capLimitKey(c.id),c.cap)), 'Spend only after paycheck assignment'])).map(r=>[r[0], String(r[1]).includes('-') ? '$'+r[1] : money(Number(r[1])), r[2]]);
+    return simpleTable(['Category','Monthly Amount','Operating Rule'], rows);
   }
+
 
   function checklist(person,items){
     const state = jget('ck:'+person,{});
@@ -984,6 +1022,11 @@
     $('#settings').innerHTML = `
       <div class="grid two">
         <div class="card stack">
+          <h2>Income Editors</h2>
+          <p class="fine">These values save as inc:daniel and inc:sonia and update the full app live.</p>
+          ${incomeEditors()}
+        </div>
+        <div class="card stack">
           <h2>Monthly Net Worth Snapshot</h2>
           <p class="fine">Captures current totals with a timestamp. Max 36 entries.</p>
           <button class="btn primary" type="button" data-snap="1">Capture Snapshot</button>
@@ -994,20 +1037,17 @@
           ${allDebts().map(d=>`<div class="field"><label>${d.label}</label><input data-apr="${d.id}" type="number" step="0.01" value="${d.apr}"></div>`).join('')}
         </div>
         <div class="card stack">
-          <h2>Export / Import</h2>
+          <h2>Export / Import / Reset</h2>
           <button class="btn secondary" type="button" data-export="json">Export JSON</button>
           <button class="btn secondary" type="button" data-export="csv">Export CSV</button>
           <label class="btn secondary" for="importFile">Import JSON</label>
           <input id="importFile" class="hidden-file" type="file" accept="application/json" />
-        </div>
-        <div class="card stack">
-          <h2>Clear Progress</h2>
-          <p class="fine">Removes tracked localStorage keys only. Reload required after reset.</p>
           <button class="btn danger" type="button" id="clearBtn">Clear All Progress</button>
         </div>
       </div>`;
     renderNwLogs();
   }
+
 
   function captureSnapshot(){
     const log = jget('nwlog',[]);
@@ -1045,6 +1085,9 @@
     const wd=$('#wt-daniel'), ws=$('#wt-sonia');
     if(wd) wd.textContent=money(t.walletDaniel);
     if(ws) ws.textContent=money(t.walletSonia);
+    const ci=$('#combined-income'); if(ci) ci.textContent=money(income('daniel')+income('sonia'));
+    $$('[data-income="daniel"]').forEach(i=>{ if(Number(i.value)!==income('daniel')) i.value=income('daniel'); });
+    $$('[data-income="sonia"]').forEach(i=>{ if(Number(i.value)!==income('sonia')) i.value=income('sonia'); });
     const burn = allDebts().reduce((s,d)=>s + currentDebt(d.id)*(d.apr/100/12),0);
     const db=$('#dash-burn'); if(db) db.textContent=money(burn);
     const list=$('#burn-list');
@@ -1053,6 +1096,7 @@
     updBills();
     renderNwLogs();
   }
+
 
   function updMove(){
     const target = sliderGoal('dmove',1950), saved = currentGoal('dmove'), needed = Math.max(0,target-saved);
@@ -1071,7 +1115,7 @@
   function updSavingsRate(){
     const container = $('#saving-rate-rows');
     if(!container) return;
-    const income = D.daniel.income + D.sonia.income;
+    const incomeTotal = income('daniel') + income('sonia');
     const debtPmts = allDebts().reduce((s,d)=>s + payment(d.id,d.min),0);
     const savings = 200;
     const bills = D.household.bills.reduce((s,b)=>s+billAmount(b.id,b.amount),0);
@@ -1081,10 +1125,11 @@
       ['Living Expenses',bills,'amber']
     ];
     container.innerHTML = rows.map(([label,val,color])=>{
-      const r=clamp(val/income*100,0,100);
+      const r=clamp(val/Math.max(1,incomeTotal)*100,0,100);
       return `<div class="stack"><div class="row"><span>${label}</span><strong class="pv">${pct(r)} · ${money(val)}</strong></div><div class="bar"><div class="fill ${color}" style="width:${r}%"></div></div></div>`;
     }).join('');
   }
+
 
   function updLast(){
     const last = jget('lastUpdated',null);
@@ -1098,13 +1143,14 @@
 
   function collectStorage(){
     const out = {};
-    const prefixes = ['b:','g:','w:','cs:','cl:','p:','ck:','st:'];
+    const prefixes = ['b:','g:','w:','cs:','cl:','p:','ck:','st:','inc:','bill:','alloc:','inv:'];
     for(let i=0;i<localStorage.length;i++){
       const k = localStorage.key(i);
       if(prefixes.some(p=>k.startsWith(p)) || ['nwlog','pm','lastUpdated'].includes(k)) out[k]=jget(k,null);
     }
     return out;
   }
+
 
   function download(name,text,type){
     const blob = new Blob([text],{type});
@@ -1127,9 +1173,15 @@
   function bindEvents(){
     $('#loginForm').addEventListener('submit',e=>{
       e.preventDefault();
-      const v = $('#passInput').value.trim().toUpperCase();
-      if(v===PASS){sessionStorage.setItem('financeUnlocked','true');$('#login').classList.add('hidden');}
-      else $('#loginErr').textContent='Incorrect passcode.';
+      const input = $('#passwordInput');
+      if(input.value.trim().toUpperCase() === PASS){
+        sessionStorage.setItem('financeUnlocked','true');
+        $('#login').classList.add('hidden');
+        toast('Unlocked');
+      } else {
+        $('#loginError').textContent='Incorrect passcode.';
+        input.select();
+      }
     });
     $('#lockBtn').addEventListener('click',()=>{sessionStorage.clear();location.reload();});
     $('#printBtn').addEventListener('click',()=>window.print());
@@ -1157,9 +1209,9 @@
         p.caps.forEach(c=>{localStorage.removeItem(capSpentKey(c.id)); updCap(c.id); const inp=$(`[data-capspent="${c.id}"]`); if(inp) inp.value=0;});
         jset('lastUpdated',new Date().toISOString());
       }
-      if(e.target.matches('[data-snap]')) captureSnapshot();
-      if(e.target.matches('[data-export="json"]')) download('finance-progress.json',JSON.stringify(collectStorage(),null,2),'application/json');
-      if(e.target.matches('[data-export="csv"]')) exportCsv();
+      if(e.target.matches('[data-snap]')){ captureSnapshot(); toast('Snapshot recorded'); }
+      if(e.target.matches('[data-export="json"]')){ download('finance-progress.json',JSON.stringify(collectStorage(),null,2),'application/json'); toast('JSON exported'); }
+      if(e.target.matches('[data-export="csv"]')){ exportCsv(); toast('CSV exported'); }
       if(e.target.id==='clearBtn'){
         if(confirm('Clear all tracked progress from this browser?')){
           const keys=[]; for(let i=0;i<localStorage.length;i++) keys.push(localStorage.key(i));
@@ -1197,6 +1249,11 @@
         jset('w:'+person+':'+kind,Number(t.value||0));
         updHeroStats();
       }
+      if(t.matches('[data-income]')){
+        jset('inc:'+t.dataset.income, Number(t.value||0));
+        updHeroStats();
+        updSavingsRate();
+      }
       if(t.matches('[data-capspent]')){jset(capSpentKey(t.dataset.capspent),Number(t.value||0));updCap(t.dataset.capspent);}
       if(t.matches('[data-caplimit]')){jset(capLimitKey(t.dataset.caplimit),Number(t.value||1));updCap(t.dataset.caplimit);}
       if(t.matches('[data-bill]')){jset('bill:'+t.dataset.bill,Number(t.value||0));updBills();}
@@ -1221,7 +1278,7 @@
           try{
             const data=JSON.parse(reader.result);
             Object.entries(data).forEach(([k,v])=>{
-              if(['b:','g:','w:','cs:','cl:','p:','ck:','st:'].some(p=>k.startsWith(p)) || ['nwlog','pm','lastUpdated'].includes(k)) jset(k,v);
+              if(['b:','g:','w:','cs:','cl:','p:','ck:','st:','inc:','bill:','alloc:','inv:'].some(p=>k.startsWith(p)) || ['nwlog','pm','lastUpdated'].includes(k)) jset(k,v);
             });
             location.reload();
           }catch{alert('Import failed. Use a valid exported JSON file.');}
@@ -1233,7 +1290,7 @@
 
   function init(){
     if(sessionStorage.getItem('financeUnlocked')==='true') $('#login').classList.add('hidden');
-    setTimeout(()=>$('#passInput')?.focus(),0);
+    setTimeout(()=>$('#passwordInput')?.focus(),0);
     if(jget('pm',false)){document.body.classList.add('pm');$('#pmBtn').textContent='Show $';}
     renderDashboard();
     renderPerson('daniel');
