@@ -92,6 +92,7 @@ details{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06)
   <button class="tab" data-tab="daniel">Daniel</button>
   <button class="tab" data-tab="sonia">Sonia</button>
   <button class="tab" data-tab="household">Household</button>
+  <button class="tab" data-tab="playbook">Playbook</button>
   <button class="tab" data-tab="settings">Settings</button>
 </div></nav>
 
@@ -100,6 +101,7 @@ details{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06)
 <section id="daniel" class="panel"></section>
 <section id="sonia" class="panel"></section>
 <section id="household" class="panel"></section>
+<section id="playbook" class="panel"></section>
 <section id="settings" class="panel"></section>
 </main>
 <div id="toastbox" class="toastbox"></div>
@@ -290,6 +292,158 @@ function danielBaselineCard(){
     <details class="fine"><summary>Current fixed obligations</summary><div class="stack">${fixed}</div></details><button class="btn small" data-apply-daniel-baseline="1">Apply Statement Baseline</button>
   </div>`;
 }
+
+function weeklyPaycheckEstimate(){
+  return DANIEL_STATEMENT_BASELINE.payrollWeekly;
+}
+function paycheckPlanRows(){
+  const pay=weeklyPaycheckEstimate();
+  const alloc=J('alloc:daniel',DEFAULTS.daniel.alloc);
+  return Object.keys(alloc).map(k=>{
+    const pct=Number(alloc[k]||0), amount=pay*(pct/100);
+    return [k,pct,amount];
+  });
+}
+function monthlyPlanRows(){
+  const payMonth=DANIEL_STATEMENT_BASELINE.payrollMonthly + DANIEL_STATEMENT_BASELINE.vaMonthly;
+  const alloc=J('alloc:daniel',DEFAULTS.daniel.alloc);
+  return Object.keys(alloc).map(k=>{
+    const pct=Number(alloc[k]||0), amount=payMonth*(pct/100);
+    return [k,pct,amount];
+  });
+}
+function estimateMonthsToPayoff(balance,apr,monthlyPayment){
+  if(!monthlyPayment||monthlyPayment<=0||balance<=0)return 0;
+  const r=apr/100/12;
+  if(r===0)return Math.ceil(balance/monthlyPayment);
+  if(monthlyPayment<=balance*r)return 999;
+  return Math.ceil(-Math.log(1-(r*balance/monthlyPayment))/Math.log(1+r));
+}
+function danielOutcomeProjection(){
+  const alloc=J('alloc:daniel',DEFAULTS.daniel.alloc);
+  const monthlyIncome=DANIEL_STATEMENT_BASELINE.incomeMonthly;
+  const visa=debt('d0'), vehicle=debt('d1');
+  const visaMonthly=monthlyIncome*(Number(alloc['NFCU Visa']||0)/100);
+  const vehicleMonthly=monthlyIncome*(Number(alloc['Vehicle loan']||0)/100);
+  const savingsMonthly=monthlyIncome*(Number(alloc['Move/Emergency savings']||0)/100);
+  const sharedTarget=sharedGoalTargetTotal();
+  const sharedCurrent=sharedGoalTotal();
+  return {
+    visaMonthly,vehicleMonthly,savingsMonthly,
+    visaMonths:estimateMonthsToPayoff(bal('d0'),visa.apr,visaMonthly),
+    vehicleMonths:estimateMonthsToPayoff(bal('d1'),vehicle.apr,vehicleMonthly),
+    sharedGoalMonths:savingsMonthly>0?Math.ceil(Math.max(0,sharedTarget-sharedCurrent)/savingsMonthly):0
+  };
+}
+
+function restorePlaybookChecks(){
+  $$('[data-playcheck]').forEach(cb=>{cb.checked=!!J('playcheck:'+cb.dataset.playcheck,false)});
+}
+
+function renderPlanTab(){
+  const pay=weeklyPaycheckEstimate();
+  const pRows=paycheckPlanRows();
+  const mRows=monthlyPlanRows();
+  const outcome=danielOutcomeProjection();
+
+  const paycheckRows=pRows.map(([k,pct,amount])=>{
+    const plain=k==='Shared bills set-aside'?'Set aside for shared bills':k;
+    return `<div class="alloc-row"><span>${plain}</span><span class="pill">${pct}%</span><strong class="pv">${money(amount)}</strong></div>`;
+  }).join('');
+
+  const monthlyRows=mRows.map(([k,pct,amount])=>{
+    const plain=k==='Shared bills set-aside'?'Shared bills set-aside':k;
+    return `<div class="alloc-row"><span>${plain}</span><span class="pill">${pct}%</span><strong class="pv">${money(amount)}</strong></div>`;
+  }).join('');
+
+  const actionRules=[
+    ['Paycheck first','Enter paycheck before spending from it. The system cannot protect money that was already spent.'],
+    ['Move money before swiping','Shared bills, debt, and savings get handled before convenience spending.'],
+    ['Cap categories weekly','Gas, food, personal, and eating out are not judged after the month. They are watched every paycheck.'],
+    ['Overage gets absorbed','If one category goes over, the Home cap section tells you where the remaining cushion has to tighten.'],
+    ['Debt payment must be recorded','A payment only improves the system after you record it against the debt balance.']
+  ].map((r,i)=>`<div class="cap-row"><div><strong>${i+1}. ${r[0]}</strong><small>${r[1]}</small></div><span class="pill ${i<2?'green':i<4?'amber':'blue'}">${i===0?'Start':i===1?'Move':i===2?'Track':i===3?'Adjust':'Update'}</span></div>`).join('');
+
+  const firstPaycheckTasks=[
+    ['Enter paycheck in Daniel tab',`Use the actual net amount. Current model uses ${money(pay)} as the latest payroll estimate.`],
+    ['Check Paycheck Plan','Use the calculated amounts as instructions, not just information.'],
+    ['Move shared bills set-aside','This is the portion reserved for household bills, not extra spending money.'],
+    ['Record savings/shared goal','Use the savings or shared-goal section so assets/net worth update.'],
+    ['Record debt payment when made','Use Debt Progress so interest burn/projection updates.'],
+    ['Record spending entries','Add every category spend so Home shows the real household cap position.']
+  ].map((r,i)=>`<label class="cap-row" style="cursor:pointer"><div><strong>${r[0]}</strong><small>${r[1]}</small></div><input type="checkbox" data-playcheck="${i}" style="width:22px;min-height:22px"></label>`).join('');
+
+  const guardrails=[
+    ['Apple Cash / transfers','Allowed only when assigned to a bill, savings move, debt payment, or planned shared goal. Otherwise record it as Personal Spending immediately.'],
+    ['Convenience stops','Record under Transportation, Eating Out, or Personal before it becomes invisible.'],
+    ['Vape / tobacco','Treat as Personal Spending. Cap it first; reduce later.'],
+    ['Subscriptions/apps','Keep them under Phone / Insurance / Subscriptions and review monthly.'],
+    ['Retail / random buys','Record as Personal Spending unless it is clearly Groceries/Household.']
+  ].map(r=>`<div class="cap-row"><div><strong>${r[0]}</strong><small>${r[1]}</small></div><span class="pill">Rule</span></div>`).join('');
+
+  $('#playbook').innerHTML=`<div class="grid two">
+    <div class="card big stack" style="grid-column:1/-1">
+      <p class="kicker">Operating System</p>
+      <div class="hero green pv">${money(DANIEL_STATEMENT_BASELINE.incomeMonthly)}</div>
+      <p class="muted">This tab turns the statement pattern into a repeatable paycheck workflow. The point is not to shame the spending. The point is to tell the paycheck what to do before the money leaks.</p>
+    </div>
+
+    <div class="card stack">
+      <h2>Paycheck Walkthrough</h2>
+      <p class="fine">Run this every time a paycheck lands.</p>
+      <div class="stack">${firstPaycheckTasks}</div>
+    </div>
+
+    <div class="card stack">
+      <h2>Per-Paycheck Instructions</h2>
+      <p class="fine">Based on estimated current payroll of <span class="pv">${money(pay)}</span>. These amounts are the default move/pay/set-aside instructions.</p>
+      <div class="stack">${paycheckRows}</div>
+    </div>
+
+    <div class="card stack">
+      <h2>Operating Rules</h2>
+      <div class="stack">${actionRules}</div>
+    </div>
+
+    <div class="card stack">
+      <h2>Monthly Plan</h2>
+      <p class="fine">Monthly equivalent using current income baseline. This is what the system should produce if each paycheck is routed correctly.</p>
+      <div class="stack">${monthlyRows}</div>
+    </div>
+
+    <div class="card stack">
+      <h2>Expected Outcomes</h2>
+      <div class="grid two">
+        <div class="tile"><div class="label">Visa attack</div><div class="mini blue pv">${money(outcome.visaMonthly)}/mo</div><p class="fine">Estimated payoff: ${outcome.visaMonths>=999?'payment too low':outcome.visaMonths+' months'}</p></div>
+        <div class="tile"><div class="label">Vehicle set-aside</div><div class="mini blue pv">${money(outcome.vehicleMonthly)}/mo</div><p class="fine">Estimated payoff: ${outcome.vehicleMonths>=999?'payment too low':outcome.vehicleMonths+' months'}</p></div>
+        <div class="tile"><div class="label">Shared goal funding</div><div class="mini green pv">${money(outcome.savingsMonthly)}/mo</div><p class="fine">Current shared goal estimate: ${outcome.sharedGoalMonths} months</p></div>
+        <div class="tile"><div class="label">Guardrail target</div><div class="mini amber">No new damage</div><p class="fine">Primary short-term goal: avoid overdraft, new Visa charges, and unrecorded transfers.</p></div>
+      </div>
+    </div>
+
+    <div class="card stack" style="grid-column:1/-1">
+      <h2>Spending Guardrails</h2>
+      <p class="fine">These rules convert the bank-statement pattern into active category behavior.</p>
+      <div class="stack">${guardrails}</div>
+    </div>
+
+    <div class="card stack" style="grid-column:1/-1">
+      <h2>What To Do When Something Goes Off Plan</h2>
+      <div class="grid three">
+        <div class="tile"><strong>Category over budget</strong><p class="fine">Do not ignore it. Home shows the household overage. Reduce the remaining cushions before spending again.</p></div>
+        <div class="tile"><strong>Missed debt move</strong><p class="fine">Record it as not yet paid by leaving the balance unchanged. The Projection Map will stay honest.</p></div>
+        <div class="tile"><strong>Unexpected expense</strong><p class="fine">Record it in the closest category first. Then decide whether it came from buffer, shared goal delay, or reduced personal spending.</p></div>
+      </div>
+    </div>
+
+    <div class="card stack" style="grid-column:1/-1">
+      <h2>Operating Sentence</h2>
+      <div class="tile"><strong>Every paycheck gets assigned before it gets spent.</strong><p class="fine">The app is useful only when the paycheck is routed first and spending is recorded while it is happening, not reconstructed later.</p></div>
+    </div>
+  </div>`;
+}
+
+
 function applyStatementBaselineToDaniel(){
   S('inc:daniel',DANIEL_STATEMENT_BASELINE.incomeMonthly,true);
   S('b:d0',9542.04,true);
@@ -418,12 +572,12 @@ function refreshHousehold(){
   const sd=Number(J('split:daniel',59)), ss=Number(J('split:sonia',41)), totalPct=Math.max(1,sd+ss); let total=0;
   $('#billRows').innerHTML=bills().map((b,i)=>{total+=Number(b.amount||0);const ds=b.amount*(sd/totalPct), so=b.amount*(ss/totalPct);return`<div class="cap-card grid four"><div class="field"><label>Bill name</label><input data-bill-name="${i}" value="${b.label}"></div><div class="field"><label>Amount</label><input data-bill-amount="${i}" type="number" step="0.01" value="${b.amount}"></div><div><div class="label">Daniel</div><div class="mini blue pv">${money(ds)}</div></div><div><div class="label">Sonia</div><div class="mini green pv">${money(so)}</div></div><button class="btn small danger" data-remove-bill="${i}">Remove</button></div>`}).join('')+`<div class="row"><strong>Total Bills</strong><strong class="pv">${money(total)}</strong></div>`;
 }
-function refreshAll(){refreshHome();persons.forEach(refreshPerson);refreshHousehold();const ds=$('#dtiSnapshot');if(ds)ds.innerHTML=dtiSnapshot();const hp=$('#householdPositionSettings');if(hp)hp.innerHTML=householdPositionBlock();const pm=$('#projectionMap');if(pm)pm.innerHTML=projectionTable();const ba=$('#budgetAdjustment');if(ba)ba.innerHTML=categoryBudgetAdjustmentRows();last()}
+function refreshAll(){refreshHome();persons.forEach(refreshPerson);refreshHousehold();if($('#playbook')){renderPlanTab();restorePlaybookChecks();}const ds=$('#dtiSnapshot');if(ds)ds.innerHTML=dtiSnapshot();const hp=$('#householdPositionSettings');if(hp)hp.innerHTML=householdPositionBlock();const pm=$('#projectionMap');if(pm)pm.innerHTML=projectionTable();const ba=$('#budgetAdjustment');if(ba)ba.innerHTML=categoryBudgetAdjustmentRows();last()}
 function savePay(p){const amount=Number($(`[data-pay-amount="${p}"]`).value||0); if(amount<=0){toast('Enter paycheck amount');return} const date=$(`[data-pay-date="${p}"]`).value||new Date().toISOString().slice(0,10), source=$(`[data-pay-source="${p}"]`).value||'', logs=log(p); logs.push({amount,date,source,period:date,ts:new Date().toISOString()}); S('pay:'+p,logs,true); S('period:'+p,date,true); cats().forEach(c=>localStorage.removeItem('cs:'+p+':'+c.id)); localStorage.removeItem('sv:'+p); refreshAll(); showTab(p); toast(`${P[p].name} paycheck saved`)}
 function addSpending(p,id){const input=$(`#${p}-${id}-add`), amount=Number(input?.value||0); if(amount<=0){toast('Enter spending amount');return} S('cs:'+p+':'+id,spent(p,id)+amount,true); if(input)input.value=''; refreshAll(); toast('Spending recorded')}
 function addSavings(p){const amount=Number($(`#${p}SavingsAdd`)?.value||0), id=$(`#${p}SavingsSelect`)?.value; if(amount<=0||!id){toast('Enter savings amount');return} S('sv:'+p,savedPeriod(p)+amount,true); S('b:'+id,bal(id)+amount,true); $(`#${p}SavingsAdd`).value=''; refreshAll(); toast('Savings recorded')}
 function recordDebt(id){const amount=Number($(`#pay-${id}`)?.value||0); if(amount<=0){toast('Enter payment amount');return} S('b:'+id,Math.max(0,bal(id)-amount),true); $(`#pay-${id}`).value=''; refreshAll(); toast('Debt payment recorded')}
-function showTab(id){$$('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));$$('.panel').forEach(p=>p.classList.toggle('active',p.id===id));$('#activeUserLine').textContent=id==='home'?'Household dashboard':id==='household'?'Shared bills and debt sequence':id==='settings'?'App settings':P[id].name+' workflow'}
+function showTab(id){$$('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));$$('.panel').forEach(p=>p.classList.toggle('active',p.id===id));$('#activeUserLine').textContent=id==='home'?'Household dashboard':id==='household'?'Shared bills and debt sequence':id==='settings'?'App settings':id==='playbook'?'Paycheck operating playbook':P[id].name+' workflow'}
 function collect(){const out={},pref=['b:','g:','w:','cs:','cb:','sv:','pay:','period:','inc:','bill','bills:','alloc:','split:','apr:','cat:','save:','debt:'];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(pref.some(p=>k.startsWith(p))||['pm','lastUpdated','lastProfile','sharedGoals'].includes(k))out[k]=J(k,null)}return out}
 function download(name,text,type){const blob=new Blob([text],{type}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();URL.revokeObjectURL(a.href);a.remove()}
 
@@ -465,11 +619,11 @@ function bind(){
     if(t.matches('[data-debt-name]')){S('debt:name:'+t.dataset.debtName,t.value,true);refreshAll()}
     if(t.matches('[data-debt-balance]')){S('b:'+t.dataset.debtBalance,Number(t.value||0),true);refreshAll()}
   });
-  document.addEventListener('change',e=>{const t=e.target;if(t.id==='importFile'&&t.files[0]){const r=new FileReader();r.onload=()=>{try{const data=JSON.parse(r.result);Object.entries(data).forEach(([k,v])=>localStorage.setItem(k,JSON.stringify(v)));location.reload()}catch{toast('Import failed')}};r.readAsText(t.files[0])}});
+  document.addEventListener('change',e=>{const t=e.target;if(t.matches('[data-playcheck]')){S('playcheck:'+t.dataset.playcheck,t.checked,true)}if(t.id==='importFile'&&t.files[0]){const r=new FileReader();r.onload=()=>{try{const data=JSON.parse(r.result);Object.entries(data).forEach(([k,v])=>localStorage.setItem(k,JSON.stringify(v)));location.reload()}catch{toast('Import failed')}};r.readAsText(t.files[0])}});
 }
 function init(){
   if(J('pm',false)){document.body.classList.add('pm');$('#privacyBtn').textContent='Show $'}
-  renderHome();renderPerson('daniel');renderPerson('sonia');renderHousehold();renderSettings();bind();refreshAll();
+  renderHome();renderPerson('daniel');renderPerson('sonia');renderHousehold();renderPlanTab();restorePlaybookChecks();renderSettings();bind();refreshAll();
   const profile=sessionStorage.getItem('activeProfile')||J('lastProfile','daniel');$('#profileSelect').value=profile;
   if(sessionStorage.getItem('financeUnlocked')==='true'){$('#login').classList.add('hidden');showTab(profile)}
   else setTimeout(()=>$('#passwordInput')?.focus(),0);
