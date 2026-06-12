@@ -109,15 +109,54 @@ details{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06)
 const PASS = 'JASPER';
 const P={daniel:{name:'Daniel',cls:'blue',color:'var(--blue)'},sonia:{name:'Sonia',cls:'green',color:'var(--green)'}};
 const DEFAULTS={
-  daniel:{income:3200,alloc:{'Shared bills set-aside':25,'NFCU Visa':22,'Vehicle loan':13,'Move/Emergency savings':9,'Transportation':5,'Food/Personal':5},
-    debts:[{id:'d0',label:'NFCU Visa',balance:9315.95,apr:17.5,min:452.82},{id:'d1',label:'Vehicle Loan',balance:22010.21,apr:9.14,min:426.20},{id:'d2',label:'Apple Card',balance:930.39,apr:20,min:50}],
-    savings:[{id:'s0',label:'Move Fund',current:0,target:1950},{id:'s1',label:'Emergency Fund',current:0,target:5000}]},
+  daniel:{income:3425.22,alloc:{'Shared bills set-aside':25,'NFCU Visa':22,'Vehicle loan':13,'Move/Emergency savings':9,'Transportation':5,'Food/Personal':5},
+    debts:[{id:'d0',label:'NFCU Visa',balance:9542.04,apr:17.5,min:452.82},{id:'d1',label:'Vehicle Loan',balance:22043.28,apr:9.14,min:426.20},{id:'d2',label:'Apple Card',balance:930.39,apr:20,min:50}],
+    savings:[{id:'s0',label:'Move Fund',current:0,target:1950},{id:'s1',label:'Emergency Fund',current:0,target:5000},{id:'s4',label:'NFCU EasyStart Certificate',current:3648.52,target:3648.52}]},
   sonia:{income:2200,alloc:{'Shared bills set-aside':24,'NW Bank Loan':6,'Family Debt':9,'Emergency savings':5,'Transportation':6,'Food/Personal':6,'Personal spending':5},
     debts:[{id:'d3',label:'NW Bank Loan',balance:2266.02,apr:12.5,min:135.83},{id:'d4',label:'Family Debt',balance:10000,apr:0,min:200},{id:'d5',label:'Apple Card',balance:0,apr:20,min:0}],
     savings:[{id:'s2',label:'Move Fund',current:1000,target:2500},{id:'s3',label:'Sinking Fund',current:0,target:1000}]},
   categories:[{id:'transport',label:'Transportation',budget:300,note:'Gas, parking, oil, small vehicle-related costs'},{id:'food',label:'Food & Groceries',budget:450,note:'Groceries and baseline household food'},{id:'dining',label:'Eating Out',budget:140,note:'Fast food, coffee, restaurants, snacks'},{id:'personal',label:'Personal Spending',budget:250,note:'Amazon, beauty, clothes, personal items'},{id:'bills',label:'Phone / Insurance / Subscriptions',budget:285,note:'Verizon, Progressive, subscriptions'},{id:'household',label:'Household / Misc.',budget:150,note:'Cleaning, household items, small shared needs'}],
   bills:[{id:'rent',label:'Rent',amount:800},{id:'electric',label:'Electric',amount:150},{id:'internet',label:'Internet',amount:50},{id:'groceries',label:'Groceries',amount:300}],
   debtSequence:[['1','Move Fund','Finish liquidity first so the move does not create new debt.'],['2','NW Bank Loan','Clear Sonia’s 12.50% debt after the cash floor is safe.'],['3','NFCU Visa','Highest active revolving balance and high APR.'],['4','Family Debt','Keep consistent repayment rhythm and preserve trust.'],['5','Emergency Funds','Build both cash buffers.'],['6','Vehicle Loan','Longer-term payoff after high-interest pressure drops.']]
+};
+
+const DANIEL_STATEMENT_BASELINE = {
+  incomeMonthly:3425.22,
+  payrollWeekly:606.78,
+  payrollMonthly:2629.38,
+  vaMonthly:795.84,
+  mayOperatingExpenses:3345.05,
+  maySavingsTransfers:550.00,
+  mayOutflowWithSavings:3895.05,
+  netVsModeledIncome:-469.83,
+  expensePressure:[
+    ['Apple Cash transfers',919.68,'personal'],
+    ['Convenience / gas stops',407.83,'transport'],
+    ['Groceries / household / retail',345.64,'food'],
+    ['Savings transfers',550.00,'savings'],
+    ['Vape / tobacco',148.32,'personal'],
+    ['Ashworx',146.16,'personal'],
+    ['RAC purchases / store charges',137.88,'personal'],
+    ['Progressive insurance',136.66,'bills'],
+    ['Subscriptions / apps',117.02,'bills'],
+    ['Eating out',108.77,'dining'],
+    ['Comcast / Xfinity',50.00,'bills'],
+    ['Planet Fitness',42.99,'bills'],
+    ['Apple Card payment observed',40.84,'debt'],
+    ['Alcohol',34.97,'personal'],
+    ['Cash withdrawal',22.50,'personal'],
+    ['Bank / overdraft fees',21.00,'fees'],
+    ['TruStage',12.50,'bills']
+  ],
+  fixed:[
+    ['NFCU Vehicle Loan',426.20],
+    ['NFCU Visa minimum',452.82],
+    ['Progressive',136.66],
+    ['Comcast / Xfinity',50.00],
+    ['TruStage',12.50],
+    ['Planet Fitness',42.99],
+    ['Apple Card estimate',50.00]
+  ]
 };
 const persons=['daniel','sonia'];
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
@@ -233,9 +272,37 @@ function renderHome(){
     <div class="card stack" style="grid-column:1/-1"><h2>Household Spending Caps</h2><div id="capBars" class="stack"></div><details class="fine"><summary>Budget adjustment when one category goes over</summary><div id="budgetAdjustment" class="stack"></div></details></div>
   </div>`;
 }
+
+function danielBaselineCard(){
+  const b=DANIEL_STATEMENT_BASELINE;
+  const pressure=b.expensePressure.slice(0,8).map(x=>`<div class="alloc-row"><span>${x[0]}</span><span class="pill">${x[2]}</span><strong class="pv">${money(x[1])}</strong></div>`).join('');
+  const fixed=b.fixed.map(x=>`<div class="row"><span>${x[0]}</span><strong class="pv">${money(x[1])}</strong></div>`).join('');
+  return `<div class="card stack" style="grid-column:1/-1">
+    <h2>Statement Baseline</h2>
+    <p class="fine">Current Daniel baseline from May statements. Use this as the operating reality for the app, not a guess.</p>
+    <div class="grid four">
+      <div class="tile"><div class="label">Monthly income</div><div class="mini green pv">${money(b.incomeMonthly)}</div></div>
+      <div class="tile"><div class="label">Weekly payroll</div><div class="mini green pv">${money(b.payrollWeekly)}</div></div>
+      <div class="tile"><div class="label">Operating spend</div><div class="mini red pv">${money(b.mayOperatingExpenses)}</div></div>
+      <div class="tile"><div class="label">Gap vs income</div><div class="mini red pv">${money(b.netVsModeledIncome)}</div></div>
+    </div>
+    <details class="fine"><summary>Top May pressure points</summary><div class="stack">${pressure}</div></details>
+    <details class="fine"><summary>Current fixed obligations</summary><div class="stack">${fixed}</div></details><button class="btn small" data-apply-daniel-baseline="1">Apply Statement Baseline</button>
+  </div>`;
+}
+function applyStatementBaselineToDaniel(){
+  S('inc:daniel',DANIEL_STATEMENT_BASELINE.incomeMonthly,true);
+  S('b:d0',9542.04,true);
+  S('b:d1',22043.28,true);
+  S('b:s4',3648.52,true);
+  refreshAll();
+  toast('Daniel statement baseline applied');
+}
+
 function renderPerson(p){
   $('#'+p).innerHTML=`<div class="grid two">
     <div class="card big stack" style="grid-column:1/-1"><p class="kicker">${P[p].name} active period</p><div id="${p}Left" class="hero ${P[p].cls} pv">—</div><p id="${p}Period" class="fine"></p></div>
+    ${p==='daniel'?danielBaselineCard():''}
     <div class="card stack" style="grid-column:1/-1"><h2>Wallet</h2><div class="grid two"><div class="field"><label>Checking</label><input data-wallet="${p}:c" type="number" step="0.01" value="${J('w:'+p+':c',0)}"></div><div class="field"><label>Savings</label><input data-wallet="${p}:s" type="number" step="0.01" value="${J('w:'+p+':s',0)}"></div></div><div class="row"><span>Wallet total</span><strong id="${p}Wallet" class="${P[p].cls} pv">—</strong></div></div>
     <div class="card stack"><h2>Start Here</h2><p class="fine">Log the paycheck. The Paycheck Plan updates immediately.</p><div class="grid"><div class="field"><label>Paycheck amount</label><input data-pay-amount="${p}" type="number" step="0.01" placeholder="0.00"></div><div class="field"><label>Date</label><input data-pay-date="${p}" type="date" value="${new Date().toISOString().slice(0,10)}"></div><div class="field"><label>Source</label><input data-pay-source="${p}" placeholder="${p==='daniel'?'RAC / VA':'Payroll'}"></div></div><button class="btn primary" data-save-pay="${p}">Save Paycheck + Reset ${P[p].name}</button></div>
     <div class="card stack"><h2>Paycheck Plan</h2><p class="fine">Where the latest paycheck should go.</p><div id="${p}Alloc"></div></div>
@@ -366,6 +433,7 @@ function bind(){
   document.addEventListener('click',e=>{
     const tab=e.target.closest('[data-tab]'); if(tab)showTab(tab.dataset.tab);
     const pay=e.target.closest('[data-save-pay]'); if(pay)savePay(pay.dataset.savePay);
+    if(e.target.closest('[data-apply-daniel-baseline]'))applyStatementBaselineToDaniel();
     const spendBtn=e.target.closest('[data-add-spending]'); if(spendBtn){const [p,id]=spendBtn.dataset.addSpending.split(':');addSpending(p,id)}
     const saveBtn=e.target.closest('[data-add-savings]'); if(saveBtn)addSavings(saveBtn.dataset.addSavings);
     const debtBtn=e.target.closest('[data-record-debt]'); if(debtBtn)recordDebt(debtBtn.dataset.recordDebt);
