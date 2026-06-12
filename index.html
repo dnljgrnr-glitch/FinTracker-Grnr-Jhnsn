@@ -17,7 +17,7 @@ html{color-scheme:dark}
 body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
 body.pm .pv{filter:blur(5px);user-select:none;transition:filter .18s}body.pm .pv:hover{filter:none}
 button,input,select{font:inherit}button{cursor:pointer}
-input,select{width:100%;min-height:40px;border:1px solid transparent;border-radius:10px;background:rgba(255,255,255,.07);color:var(--text);padding:8px 10px;outline:none;font-variant-numeric:tabular-nums}
+input,select{width:100%;min-height:40px;border:1px solid transparent;border-radius:10px;background:rgba(255,255,255,.07);color:var(--text);padding:8px 10px;outline:none;font-variant-numeric:tabular-nums}select option{background:#1c1c1e;color:#fff}select:focus option,select option:checked,select option:hover{background:#2c2c2e;color:#fff}
 input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(10,132,255,.2)}
 label{font-size:.74rem;color:var(--dim);font-weight:800;letter-spacing:.02em}
 .login{position:fixed;inset:0;z-index:1000;background:#000;display:grid;place-items:center;padding:24px}
@@ -59,7 +59,7 @@ main{max-width:var(--max);margin:auto;padding:16px 16px 42px}.panel{display:none
 .tight{display:grid;gap:6px}.alloc-row{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:.88rem}.alloc-row:last-child{border-bottom:0}
 .field{display:grid;gap:5px}
 .table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px}table{width:100%;min-width:620px;border-collapse:collapse}th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left;color:var(--muted);font-size:.87rem}th{color:#fff;background:rgba(255,255,255,.035);font-size:.7rem;text-transform:uppercase;letter-spacing:.08em}tr:last-child td{border-bottom:0}
-details{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:10px}summary{cursor:pointer;color:var(--muted);font-weight:850}details p{margin:8px 0 0}
+details{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:10px}summary{cursor:pointer;color:var(--muted);font-weight:850}details p{margin:8px 0 0}.proj-grid{display:grid;gap:8px}.proj-row{display:grid;grid-template-columns:70px 1fr auto;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06)}.proj-row:last-child{border-bottom:0}.proj-meta{font-size:.76rem;color:var(--dim)}
 .toastbox{position:fixed;right:16px;bottom:16px;z-index:1200;display:grid;gap:8px}.toast{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;box-shadow:0 6px 28px rgba(0,0,0,.55);transition:.25s}
 .hidefile{display:none}
 @media(max-width:900px){.top-in{align-items:flex-start;flex-direction:column}.actions{justify-content:flex-start}.nav{top:122px}.two,.three,.four{grid-template-columns:1fr}.hero{font-size:clamp(2.25rem,13vw,3.7rem)}}
@@ -70,8 +70,7 @@ details{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06)
 <body>
 <div id="login" class="login">
   <div class="lock">
-    <h1>Daniel & Sonia</h1>
-    <p>Choose your profile, then unlock.</p>
+    <h1>D&amp;A</h1>
     <form id="loginForm" class="lock-card" novalidate>
       <select id="profileSelect" aria-label="Profile">
         <option value="daniel">Daniel</option>
@@ -179,8 +178,66 @@ function renderHousehold(){
     <div class="card stack"><h2>Debt Payoff Sequence</h2>${table(['Step','Priority','Reason'],DEFAULTS.debtSequence)}</div>
   </div>`;
 }
+
+function monthlyDebtPlan(){
+  const dAlloc=J('alloc:daniel',DEFAULTS.daniel.alloc), sAlloc=J('alloc:sonia',DEFAULTS.sonia.alloc);
+  const dInc=inc('daniel'), sInc=inc('sonia');
+  return {
+    d0:dInc*(Number(dAlloc['NFCU Visa']||0)/100),
+    d1:dInc*(Number(dAlloc['Vehicle loan']||0)/100),
+    d2:0,
+    d3:sInc*(Number(sAlloc['NW Bank Loan']||0)/100),
+    d4:sInc*(Number(sAlloc['Family Debt']||0)/100),
+    d5:0
+  };
+}
+function monthlySavingsPlan(){
+  const dAlloc=J('alloc:daniel',DEFAULTS.daniel.alloc), sAlloc=J('alloc:sonia',DEFAULTS.sonia.alloc);
+  return {
+    daniel:inc('daniel')*(Number(dAlloc['Move/Emergency savings']||0)/100),
+    sonia:inc('sonia')*(Number(sAlloc['Emergency savings']||0)/100)
+  };
+}
+function projectionAt(months){
+  const plan=monthlyDebtPlan(), savePlan=monthlySavingsPlan();
+  let debtNow=0, debtFuture=0, interestAvoided=0;
+  allDebts().forEach(d=>{
+    const b=bal(d.id), pay=Number(plan[d.id]||0), projected=Math.max(0,b-(pay*months));
+    debtNow+=b; debtFuture+=projected; interestAvoided += Math.max(0,b-projected)*(d.apr/100/12);
+  });
+  const savingsFuture=allSavings().reduce((s,x)=>s+bal(x.id),0)+(savePlan.daniel+savePlan.sonia)*months;
+  const wallet=persons.reduce((s,p)=>s+Number(J('w:'+p+':c',0))+Number(J('w:'+p+':s',0)),0);
+  const nw=savingsFuture+wallet-debtFuture;
+  return {months,debtFuture,savingsFuture,nw,interestAvoided};
+}
+function projectionTable(){
+  const now=totals(), marks=[0,3,6,12,18,24,36];
+  return `<div class="stack">
+    <div class="grid three">
+      <div class="tile"><div class="label">Current Net Worth</div><div class="${now.nw>=0?'green':'red'} mini pv">${money(now.nw)}</div></div>
+      <div class="tile"><div class="label">Current Debt</div><div class="red mini pv">${money(now.debt)}</div></div>
+      <div class="tile"><div class="label">Monthly Interest</div><div class="red mini pv">${money(now.burn)}</div></div>
+    </div>
+    <p class="fine">Projection uses current balances, saved income settings, and allocation percentages. It estimates where the plan should put you if you keep following the current monthly system.</p>
+    <div class="proj-grid">
+      ${marks.map(m=>{
+        const p=m===0?{months:0,debtFuture:now.debt,savingsFuture:now.assets,nw:now.nw}:projectionAt(m);
+        const progress=Math.max(0,Math.min(100,((now.debt-p.debtFuture)/Math.max(1,now.debt))*100));
+        return `<div class="proj-row">
+          <strong>${m===0?'Now':m+' mo'}</strong>
+          <div>
+            <div class="bar"><div class="fill green" style="width:${progress}%"></div></div>
+            <div class="proj-meta pv">Debt ${money(p.debtFuture)} · assets/savings ${money(p.savingsFuture)}</div>
+          </div>
+          <strong class="${p.nw>=0?'green':'red'} pv">${money(p.nw)}</strong>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+}
+
 function renderSettings(){
-  $('#settings').innerHTML=`<div class="grid two">
+  $('#settings').innerHTML=`<div class="grid two"><div class="card stack" style="grid-column:1/-1"><h2>Projection Map</h2><div id="projectionMap"></div></div>
     <div class="card stack"><h2>Income</h2>${persons.map(p=>`<div class="field"><label>${P[p].name} Monthly Income</label><input data-income="${p}" type="number" step="0.01" value="${inc(p)}"></div>`).join('')}</div>
     <div class="card stack"><h2>Shared Category Budgets</h2>${cats().map(c=>`<div class="tile grid two"><div class="field"><label>Category name</label><input data-cat-name="${c.id}" value="${c.label}"></div><div class="field"><label>Monthly cap</label><input data-cat-budget="${c.id}" type="number" step="0.01" value="${c.budget}"></div></div>`).join('')}</div>
     <div class="card stack"><h2>APR Editor</h2>${allDebts().map(d=>`<div class="field"><label>${d.label}</label><input data-apr="${d.id}" type="number" step="0.01" value="${d.apr}"></div>`).join('')}</div>
@@ -208,7 +265,7 @@ function refreshHousehold(){
   const sd=Number(J('split:daniel',59)), ss=Number(J('split:sonia',41)), totalPct=Math.max(1,sd+ss); let total=0;
   $('#billRows').innerHTML=bills().map((b,i)=>{total+=Number(b.amount||0);const ds=b.amount*(sd/totalPct), so=b.amount*(ss/totalPct);return`<div class="cap-card grid four"><div class="field"><label>Bill name</label><input data-bill-name="${i}" value="${b.label}"></div><div class="field"><label>Amount</label><input data-bill-amount="${i}" type="number" step="0.01" value="${b.amount}"></div><div><div class="label">Daniel</div><div class="mini blue pv">${money(ds)}</div></div><div><div class="label">Sonia</div><div class="mini green pv">${money(so)}</div></div><button class="btn small danger" data-remove-bill="${i}">Remove</button></div>`}).join('')+`<div class="row"><strong>Total Bills</strong><strong class="pv">${money(total)}</strong></div>`;
 }
-function refreshAll(){refreshHome();persons.forEach(refreshPerson);refreshHousehold();last()}
+function refreshAll(){refreshHome();persons.forEach(refreshPerson);refreshHousehold();const pm=$('#projectionMap');if(pm)pm.innerHTML=projectionTable();last()}
 function savePay(p){const amount=Number($(`[data-pay-amount="${p}"]`).value||0); if(amount<=0){toast('Enter paycheck amount');return} const date=$(`[data-pay-date="${p}"]`).value||new Date().toISOString().slice(0,10), source=$(`[data-pay-source="${p}"]`).value||'', logs=log(p); logs.push({amount,date,source,period:date,ts:new Date().toISOString()}); S('pay:'+p,logs,true); S('period:'+p,date,true); cats().forEach(c=>localStorage.removeItem('cs:'+p+':'+c.id)); localStorage.removeItem('sv:'+p); refreshAll(); showTab(p); toast(`${P[p].name} paycheck saved`)}
 function addSpending(p,id){const input=$(`#${p}-${id}-add`), amount=Number(input?.value||0); if(amount<=0){toast('Enter spending amount');return} S('cs:'+p+':'+id,spent(p,id)+amount,true); if(input)input.value=''; refreshAll(); toast('Spending recorded')}
 function addSavings(p){const amount=Number($(`#${p}SavingsAdd`)?.value||0), id=$(`#${p}SavingsSelect`)?.value; if(amount<=0||!id){toast('Enter savings amount');return} S('sv:'+p,savedPeriod(p)+amount,true); S('b:'+id,bal(id)+amount,true); $(`#${p}SavingsAdd`).value=''; refreshAll(); toast('Savings recorded')}
@@ -232,7 +289,7 @@ function bind(){
     if(e.target.matches('[data-export="csv"]')){const rows=[['key','value'],...Object.entries(collect()).map(([k,v])=>[k,JSON.stringify(v)])];download('daniel-sonia-financial-os.csv',rows.map(r=>r.map(x=>`"${String(x).replaceAll('"','""')}"`).join(',')).join('\n'),'text/csv')}
     if(e.target.id==='clearBtn'&&confirm('Clear all progress?')){Object.keys(localStorage).forEach(k=>localStorage.removeItem(k));location.reload()}
   });
-  document.addEventListener('input',e=>{
+  document.addEventListener('change',e=>{
     const t=e.target;
     if(t.matches('[data-wallet]')){const [p,k]=t.dataset.wallet.split(':');S('w:'+p+':'+k,Number(t.value||0),true);refreshAll()}
     if(t.matches('[data-income]')){S('inc:'+t.dataset.income,Number(t.value||0),true);refreshAll()}
