@@ -65,6 +65,24 @@ details{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06)
 @media(max-width:900px){.top-in{align-items:flex-start;flex-direction:column}.actions{justify-content:flex-start}.nav{top:122px}.two,.three,.four,.start-grid{grid-template-columns:1fr}.hero{font-size:clamp(2.25rem,13vw,3.7rem)}.flow-grid{grid-template-columns:1fr 1fr}.flow-grid .tile:first-child{grid-column:1/-1}}
 @media(max-width:520px){main{padding-inline:12px}.nav{top:154px}.card{padding:11px}.top-in{padding:12px}.saved{width:100%}.alloc-row,.cap-row{grid-template-columns:1fr auto}.flow-grid{grid-template-columns:1fr}.cap-head{align-items:flex-start}.pill{font-size:.7rem}.cap-card{padding:9px}.dti-scale{grid-template-columns:1fr 1fr}}
 @media print{.login,.top,.nav,.actions,.btn,.toastbox{display:none!important}.panel{display:block!important}body{background:#fff;color:#000}.card{box-shadow:none;border:1px solid #ccc;background:#fff}.pv{filter:none!important}}
+
+/* Safe anti-scroll controls */
+.jump-chips{display:flex;gap:8px;overflow:auto;padding:2px 0 4px;scrollbar-width:none}
+.jump-chips::-webkit-scrollbar{display:none}
+.jump-chip{white-space:nowrap;border:1px solid var(--line);background:rgba(255,255,255,.055);border-radius:999px;padding:8px 10px;font-size:.78rem;font-weight:850;color:var(--text);text-decoration:none}
+.jump-chip:hover{background:rgba(255,255,255,.09)}
+.section-toggle{margin:0;padding:0;background:transparent;border:0}
+.section-toggle>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;border-radius:14px;padding:14px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.06);font-weight:900;color:var(--text)}
+.section-toggle>summary::-webkit-details-marker{display:none}
+.section-toggle>summary:after{content:'Open';font-size:.72rem;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:5px 8px}
+.section-toggle[open]>summary:after{content:'Close'}
+.section-toggle .card{margin-top:8px}
+.mobile-action-bar{position:fixed;left:0;right:0;bottom:0;z-index:60;display:none;padding:8px 10px calc(8px + env(safe-area-inset-bottom));background:rgba(0,0,0,.86);backdrop-filter:blur(18px);border-top:1px solid var(--line)}
+.mobile-action-bar .inner{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.mobile-action-bar button{min-height:42px;border-radius:13px;font-size:.72rem;padding:7px 6px}
+@media(max-width:720px){body{padding-bottom:76px}.mobile-action-bar{display:block}}
+@media(max-width:520px){.jump-chip{font-size:.74rem;padding:7px 9px}}
+
 </style>
 </head>
 <body>
@@ -104,6 +122,7 @@ details{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06)
 <section id="playbook" class="panel"></section>
 <section id="settings" class="panel"></section>
 </main>
+<div id="mobileActionMount"></div>
 <div id="toastbox" class="toastbox"></div>
 
 <script>
@@ -260,6 +279,8 @@ function categoryBudgetAdjustmentRows(){
 
 function totalCap(){return cats().reduce((s,c)=>s+c.budget,0)}
 function leftToSpend(){return totalPay()-totalSpent()-totalSaved()}
+function spentPeriod(p){return cats().reduce((sum,c)=>sum+spent(p,c.id),0)}
+function periodLeft(p){return latestPay(p)-spentPeriod(p)-savedPeriod(p)}
 function totals(){const debt=allDebts().reduce((s,d)=>s+bal(d.id),0), sav=allSavings().reduce((s,x)=>s+bal(x.id),0), shared=sharedGoalTotal(), wallet=persons.reduce((s,p)=>s+Number(J('w:'+p+':c',0))+Number(J('w:'+p+':s',0)),0), assets=sav+shared+wallet;return{debt,assets,nw:assets-debt,burn:allDebts().reduce((s,d)=>s+bal(d.id)*(d.apr/100/12),0)}}
 function toast(m){const b=$('#toastbox'),d=document.createElement('div');d.className='toast';d.textContent=m;b.appendChild(d);setTimeout(()=>{d.style.opacity=0;d.style.transform='translateY(4px)'},2200);setTimeout(()=>d.remove(),2700)}
 function last(){const v=J('lastUpdated',null);$('#lastUpdated').textContent=v?'Saved '+new Date(v).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'Not saved yet'}
@@ -453,6 +474,16 @@ function applyStatementBaselineToDaniel(){
   toast('Daniel statement baseline applied');
 }
 
+
+function mobileActionBar(){
+  return `<div class="mobile-action-bar"><div class="inner">
+    <button class="btn small" data-mobile-jump="start">Paycheck</button>
+    <button class="btn small" data-mobile-jump="spend">Spend</button>
+    <button class="btn small" data-mobile-jump="save">Save</button>
+    <button class="btn small" data-mobile-jump="debt">Debt</button>
+  </div></div>`;
+}
+
 function renderPerson(p){
   $('#'+p).innerHTML=`<div class="grid two">
     <div class="card big stack" style="grid-column:1/-1"><p class="kicker">${P[p].name} active period</p><div id="${p}Left" class="hero ${P[p].cls} pv">—</div><p id="${p}Period" class="fine"></p></div>
@@ -577,7 +608,7 @@ function savePay(p){const amount=Number($(`[data-pay-amount="${p}"]`).value||0);
 function addSpending(p,id){const input=$(`#${p}-${id}-add`), amount=Number(input?.value||0); if(amount<=0){toast('Enter spending amount');return} S('cs:'+p+':'+id,spent(p,id)+amount,true); if(input)input.value=''; refreshAll(); toast('Spending recorded')}
 function addSavings(p){const amount=Number($(`#${p}SavingsAdd`)?.value||0), id=$(`#${p}SavingsSelect`)?.value; if(amount<=0||!id){toast('Enter savings amount');return} S('sv:'+p,savedPeriod(p)+amount,true); S('b:'+id,bal(id)+amount,true); $(`#${p}SavingsAdd`).value=''; refreshAll(); toast('Savings recorded')}
 function recordDebt(id){const amount=Number($(`#pay-${id}`)?.value||0); if(amount<=0){toast('Enter payment amount');return} S('b:'+id,Math.max(0,bal(id)-amount),true); $(`#pay-${id}`).value=''; refreshAll(); toast('Debt payment recorded')}
-function showTab(id){$$('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));$$('.panel').forEach(p=>p.classList.toggle('active',p.id===id));$('#activeUserLine').textContent=id==='home'?'Household dashboard':id==='household'?'Shared bills and debt sequence':id==='settings'?'App settings':id==='playbook'?'Paycheck operating playbook':P[id].name+' workflow'}
+function showTab(id){$$('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));$$('.panel').forEach(p=>p.classList.toggle('active',p.id===id));const labels={home:'Household dashboard',household:'Shared bills and debt sequence',settings:'App settings',playbook:'Paycheck operating playbook',daniel:'Daniel workflow',sonia:'Sonia workflow'};$('#activeUserLine').textContent=labels[id]||'Financial OS'}
 function collect(){const out={},pref=['b:','g:','w:','cs:','cb:','sv:','pay:','period:','inc:','bill','bills:','alloc:','split:','apr:','cat:','save:','debt:'];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(pref.some(p=>k.startsWith(p))||['pm','lastUpdated','lastProfile','sharedGoals'].includes(k))out[k]=J(k,null)}return out}
 function download(name,text,type){const blob=new Blob([text],{type}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();URL.revokeObjectURL(a.href);a.remove()}
 
@@ -585,6 +616,8 @@ function bind(){
   $('#loginForm').addEventListener('submit',e=>{e.preventDefault();const input=$('#passwordInput');if(input.value.trim().toUpperCase() === PASS){const profile=$('#profileSelect').value;sessionStorage.setItem('financeUnlocked','true');sessionStorage.setItem('activeProfile',profile);S('lastProfile',profile,true);$('#login').classList.add('hidden');showTab(profile);toast('Unlocked')}else{$('#loginError').textContent='Incorrect passcode.';input.select()}});
   $('#lockBtn').onclick=()=>{sessionStorage.clear();location.reload()}; $('#printBtn').onclick=()=>window.print(); $('#privacyBtn').onclick=()=>{const on=!document.body.classList.contains('pm');document.body.classList.toggle('pm',on);S('pm',on,true);$('#privacyBtn').textContent=on?'Show $':'Hide $'};
   document.addEventListener('click',e=>{
+    const jump=e.target.closest('[data-jump]'); if(jump){document.getElementById(jump.dataset.jump)?.scrollIntoView({behavior:'smooth',block:'start'});}
+    const mj=e.target.closest('[data-mobile-jump]'); if(mj){const active=document.querySelector('.panel.active')?.id; if(active==='daniel'||active==='sonia'){document.getElementById(active+'-'+mj.dataset.mobileJump)?.scrollIntoView({behavior:'smooth',block:'start'});}else{showTab('daniel');setTimeout(()=>document.getElementById('daniel-'+mj.dataset.mobileJump)?.scrollIntoView({behavior:'smooth',block:'start'}),50);}}
     const tab=e.target.closest('[data-tab]'); if(tab)showTab(tab.dataset.tab);
     const pay=e.target.closest('[data-save-pay]'); if(pay)savePay(pay.dataset.savePay);
     if(e.target.closest('[data-apply-daniel-baseline]'))applyStatementBaselineToDaniel();
@@ -623,7 +656,7 @@ function bind(){
 }
 function init(){
   if(J('pm',false)){document.body.classList.add('pm');$('#privacyBtn').textContent='Show $'}
-  renderHome();renderPerson('daniel');renderPerson('sonia');renderHousehold();renderPlanTab();restorePlaybookChecks();renderSettings();bind();refreshAll();
+  const mam=$('#mobileActionMount'); if(mam)mam.innerHTML=mobileActionBar();renderHome();renderPerson('daniel');renderPerson('sonia');renderHousehold();renderPlanTab();restorePlaybookChecks();renderSettings();bind();refreshAll();
   const profile=sessionStorage.getItem('activeProfile')||J('lastProfile','daniel');$('#profileSelect').value=profile;
   if(sessionStorage.getItem('financeUnlocked')==='true'){$('#login').classList.add('hidden');showTab(profile)}
   else setTimeout(()=>$('#passwordInput')?.focus(),0);
