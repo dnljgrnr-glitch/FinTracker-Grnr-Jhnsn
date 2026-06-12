@@ -44,7 +44,7 @@ main{max-width:var(--max);margin:auto;padding:16px 16px 42px}.panel{display:none
 .fine{color:var(--dim);font-size:.82rem;line-height:1.42}.muted{color:var(--muted)}
 .row{display:flex;justify-content:space-between;align-items:center;gap:10px}.wrap{flex-wrap:wrap}.stack{display:grid;gap:10px}
 .hero{font-size:clamp(2.35rem,8vw,4.6rem);font-weight:900;letter-spacing:-.07em;line-height:.9;font-variant-numeric:tabular-nums}
-.stat{font-size:clamp(1.35rem,3vw,2rem);font-weight:875;letter-spacing:-.045em;font-variant-numeric:tabular-nums}.mini{font-size:1.07rem;font-weight:850;font-variant-numeric:tabular-nums}
+.stat{font-size:clamp(1.12rem,2.5vw,1.75rem);font-weight:875;letter-spacing:-.045em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;line-height:1.05}.mini{font-size:1.03rem;font-weight:850;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;line-height:1.08}
 .blue{color:var(--blue)}.green{color:var(--green)}.red{color:var(--red)}.amber{color:var(--amber)}
 .tile{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.05);border-radius:13px;padding:11px}
 .label{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);font-weight:900;margin-bottom:4px}
@@ -54,7 +54,7 @@ main{max-width:var(--max);margin:auto;padding:16px 16px 42px}.panel{display:none
 .pill{display:inline-flex;align-items:center;min-height:25px;border-radius:999px;padding:0 9px;font-size:.74rem;font-weight:900;background:rgba(255,255,255,.08);color:var(--muted);font-variant-numeric:tabular-nums}
 .pill.blue{background:rgba(10,132,255,.16);color:#8fc7ff}.pill.green{background:rgba(48,209,88,.14);color:#78e693}.pill.red{background:rgba(255,69,58,.15);color:#ff9f99}.pill.amber{background:rgba(255,214,10,.14);color:#ffe370}
 .dot{width:10px;height:10px;border-radius:50%;display:inline-block}.dot.d{background:var(--blue)}.dot.s{background:var(--green)}
-.cap-card{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06);border-radius:13px;padding:12px}
+.cap-card{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06);border-radius:13px;padding:10px}.cap-compact{gap:6px}.cap-compact .cap-head{margin-bottom:4px}.cap-compact .bar{height:8px}.cap-compact strong{font-size:.92rem}.flow-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.flow-grid .tile{min-width:0}.flow-grid .stat{font-size:clamp(1rem,2.1vw,1.45rem)}
 .cap-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:8px}
 .tight{display:grid;gap:6px}.alloc-row{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:.88rem}.alloc-row:last-child{border-bottom:0}
 .field{display:grid;gap:5px}
@@ -62,8 +62,8 @@ main{max-width:var(--max);margin:auto;padding:16px 16px 42px}.panel{display:none
 details{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:10px}summary{cursor:pointer;color:var(--muted);font-weight:850}details p{margin:8px 0 0}.proj-grid{display:grid;gap:8px}.proj-row{display:grid;grid-template-columns:70px 1fr auto;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06)}.proj-row:last-child{border-bottom:0}.proj-meta{font-size:.76rem;color:var(--dim)}
 .toastbox{position:fixed;right:16px;bottom:16px;z-index:1200;display:grid;gap:8px}.toast{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;box-shadow:0 6px 28px rgba(0,0,0,.55);transition:.25s}
 .hidefile{display:none}
-@media(max-width:900px){.top-in{align-items:flex-start;flex-direction:column}.actions{justify-content:flex-start}.nav{top:122px}.two,.three,.four{grid-template-columns:1fr}.hero{font-size:clamp(2.25rem,13vw,3.7rem)}}
-@media(max-width:520px){main{padding-inline:12px}.nav{top:154px}.card{padding:12px}.top-in{padding:12px}.saved{width:100%}.alloc-row{grid-template-columns:1fr auto}}
+@media(max-width:900px){.top-in{align-items:flex-start;flex-direction:column}.actions{justify-content:flex-start}.nav{top:122px}.two,.three,.four{grid-template-columns:1fr}.hero{font-size:clamp(2.25rem,13vw,3.7rem)}.flow-grid{grid-template-columns:1fr 1fr}.flow-grid .tile:first-child{grid-column:1/-1}}
+@media(max-width:520px){main{padding-inline:12px}.nav{top:154px}.card{padding:11px}.top-in{padding:12px}.saved{width:100%}.alloc-row{grid-template-columns:1fr auto}.flow-grid{grid-template-columns:1fr}.cap-head{align-items:flex-start}.pill{font-size:.7rem}.cap-card{padding:9px}}
 @media print{.login,.top,.nav,.actions,.btn,.toastbox{display:none!important}.panel{display:block!important}body{background:#fff;color:#000}.card{box-shadow:none;border:1px solid #ccc;background:#fff}.pv{filter:none!important}}
 </style>
 </head>
@@ -143,9 +143,17 @@ function activePeriod(p){return J('period:'+p,'No active period')}
 function totalPay(){return persons.reduce((s,p)=>s+latestPay(p),0)}
 function totalSpent(){return cats().reduce((s,c)=>s+persons.reduce((a,p)=>a+spent(p,c.id),0),0)}
 function totalSaved(){return persons.reduce((s,p)=>s+savedPeriod(p),0)}
+function moveGoalName(){return J('move:name','Moving Goal')}
+function moveGoalTarget(){return Number(J('move:target',1950))}
+function moveGoalCurrent(){
+  const fallback=(savingsList('daniel').find(x=>x.label==='Move Fund')?.current||0)+(savingsList('sonia').find(x=>x.label==='Move Fund')?.current||0);
+  return Number(J('move:current',fallback));
+}
+function totalAssetsWithMove(){return totals().assets + moveGoalCurrent()}
+
 function totalCap(){return cats().reduce((s,c)=>s+c.budget,0)}
 function leftToSpend(){return totalPay()-totalSpent()-totalSaved()}
-function totals(){const debt=allDebts().reduce((s,d)=>s+bal(d.id),0), sav=allSavings().reduce((s,x)=>s+bal(x.id),0), wallet=persons.reduce((s,p)=>s+Number(J('w:'+p+':c',0))+Number(J('w:'+p+':s',0)),0);return{debt,assets:sav+wallet,nw:sav+wallet-debt,burn:allDebts().reduce((s,d)=>s+bal(d.id)*(d.apr/100/12),0)}}
+function totals(){const debt=allDebts().reduce((s,d)=>s+bal(d.id),0), sav=allSavings().reduce((s,x)=>s+bal(x.id),0), move=moveGoalCurrent(), wallet=persons.reduce((s,p)=>s+Number(J('w:'+p+':c',0))+Number(J('w:'+p+':s',0)),0), assets=sav+move+wallet;return{debt,assets,nw:assets-debt,burn:allDebts().reduce((s,d)=>s+bal(d.id)*(d.apr/100/12),0)}}
 function toast(m){const b=$('#toastbox'),d=document.createElement('div');d.className='toast';d.textContent=m;b.appendChild(d);setTimeout(()=>{d.style.opacity=0;d.style.transform='translateY(4px)'},2200);setTimeout(()=>d.remove(),2700)}
 function last(){const v=J('lastUpdated',null);$('#lastUpdated').textContent=v?'Saved '+new Date(v).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'Not saved yet'}
 function table(h,r){return`<div class="table-wrap"><table><thead><tr>${h.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${r.map(row=>`<tr>${row.map(c=>`<td class="${String(c).includes('$')?'pv':''}">${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`}
@@ -154,19 +162,20 @@ function bar(label,cur,max,cls='blue'){const r=clamp(cur/Math.max(1,max)*100,0,1
 function renderHome(){
   $('#home').innerHTML=`<div class="grid two">
     <div class="card big stack" style="grid-column:1/-1"><p class="kicker">Together right now</p><div id="homeLeft" class="hero pv">—</div><p class="muted">Combined left from latest paychecks after recorded spending and savings.</p></div>
-    <div class="card stack"><h2>Money Flow</h2><div class="grid three"><div class="tile"><div class="label">Paychecks</div><div id="homePay" class="stat green pv">—</div></div><div class="tile"><div class="label">Savings</div><div id="homeSaved" class="stat blue pv">—</div></div><div class="tile"><div class="label">Spending</div><div id="homeSpent" class="stat red pv">—</div></div></div><p id="periodLine" class="fine"></p></div>
+    <div class="card stack"><h2>Money Flow</h2><div class="grid flow-grid"><div class="tile"><div class="label">Paychecks</div><div id="homePay" class="stat green pv">—</div></div><div class="tile"><div class="label">Savings</div><div id="homeSaved" class="stat blue pv">—</div></div><div class="tile"><div class="label">Spending</div><div id="homeSpent" class="stat red pv">—</div></div></div><p id="periodLine" class="fine"></p></div>
     <div class="card stack"><h2>Household Position</h2><div class="grid two"><div class="tile"><div class="label">Assets</div><div id="homeAssets" class="mini green pv">—</div></div><div class="tile"><div class="label">Debt</div><div id="homeDebt" class="mini red pv">—</div></div><div class="tile"><div class="label">Net Worth</div><div id="homeNw" class="mini pv">—</div></div><div class="tile"><div class="label">Interest Burn</div><div id="homeBurn" class="mini red pv">—</div></div></div></div>
-    <div class="card stack" style="grid-column:1/-1"><h2>Household Spending Caps</h2><p class="fine">This replaces the stagnant pie chart. Each bar shows how close the household is to the cap. Blue is Daniel, green is Sonia.</p><div id="capBars" class="stack"></div></div>
+    <div class="card stack"><h2 id="moveGoalHomeTitle">Moving Goal</h2><div id="moveGoalHome"></div></div>
+    <div class="card stack" style="grid-column:1/-1"><h2>Household Spending Caps</h2><div id="capBars" class="stack"></div></div>
   </div>`;
 }
 function renderPerson(p){
   $('#'+p).innerHTML=`<div class="grid two">
     <div class="card big stack" style="grid-column:1/-1"><p class="kicker">${P[p].name} active period</p><div id="${p}Left" class="hero ${P[p].cls} pv">—</div><p id="${p}Period" class="fine"></p></div>
-    <div class="card stack"><h2>Start Here</h2><p class="fine">Log the paycheck. The Paycheck Plan updates. Then record savings, spending, and debt payments as you complete the moves.</p><div class="grid three"><div class="field"><label>Paycheck amount</label><input data-pay-amount="${p}" type="number" step="0.01" placeholder="0.00"></div><div class="field"><label>Date</label><input data-pay-date="${p}" type="date" value="${new Date().toISOString().slice(0,10)}"></div><div class="field"><label>Source</label><input data-pay-source="${p}" placeholder="${p==='daniel'?'RAC / VA':'Payroll'}"></div></div><button class="btn primary" data-save-pay="${p}">Save Paycheck + Reset ${P[p].name}</button></div>
-    <div class="card stack"><h2>Wallet</h2><div class="grid two"><div class="field"><label>Checking</label><input data-wallet="${p}:c" type="number" step="0.01" value="${J('w:'+p+':c',0)}"></div><div class="field"><label>Savings</label><input data-wallet="${p}:s" type="number" step="0.01" value="${J('w:'+p+':s',0)}"></div></div><div class="row"><span>Wallet total</span><strong id="${p}Wallet" class="${P[p].cls} pv">—</strong></div></div>
+    <div class="card stack" style="grid-column:1/-1"><h2>Wallet</h2><div class="grid two"><div class="field"><label>Checking</label><input data-wallet="${p}:c" type="number" step="0.01" value="${J('w:'+p+':c',0)}"></div><div class="field"><label>Savings</label><input data-wallet="${p}:s" type="number" step="0.01" value="${J('w:'+p+':s',0)}"></div></div><div class="row"><span>Wallet total</span><strong id="${p}Wallet" class="${P[p].cls} pv">—</strong></div></div>
+    <div class="card stack"><h2>Start Here</h2><p class="fine">Log the paycheck. The Paycheck Plan updates immediately.</p><div class="grid three"><div class="field"><label>Paycheck amount</label><input data-pay-amount="${p}" type="number" step="0.01" placeholder="0.00"></div><div class="field"><label>Date</label><input data-pay-date="${p}" type="date" value="${new Date().toISOString().slice(0,10)}"></div><div class="field"><label>Source</label><input data-pay-source="${p}" placeholder="${p==='daniel'?'RAC / VA':'Payroll'}"></div></div><button class="btn primary" data-save-pay="${p}">Save Paycheck + Reset ${P[p].name}</button></div>
+    <div class="card stack"><h2>Paycheck Plan</h2><p class="fine">Where the latest paycheck should go.</p><div id="${p}Alloc"></div></div>
     <div class="card stack" style="grid-column:1/-1"><h2>Savings</h2><div class="grid three"><div class="field"><label>Add savings amount</label><input id="${p}SavingsAdd" type="number" step="0.01" placeholder="0.00"></div><div class="field"><label>Apply to savings goal</label><select id="${p}SavingsSelect"></select></div><div style="display:flex;align-items:end"><button class="btn green" data-add-savings="${p}" style="width:100%">Record Savings</button></div></div><div id="${p}Savings" class="grid two"></div></div>
     <div class="card stack" style="grid-column:1/-1"><h2>Monthly Spending</h2><p class="fine">Add an amount to the category. The progress meter and Home cap bars update automatically.</p><div id="${p}Cats" class="stack"></div></div>
-    <div class="card stack"><h2>Paycheck Plan</h2><p class="fine">This shows where the latest paycheck should go based on your allocation percentages.</p><div id="${p}Alloc"></div></div>
     <div class="card stack"><h2>Debt Progress</h2><div id="${p}Debt"></div></div>
     <div class="card stack" style="grid-column:1/-1"><h2>Paycheck Log</h2><div id="${p}PayLog"></div></div>
   </div>`;
@@ -239,6 +248,7 @@ function projectionTable(){
 function renderSettings(){
   $('#settings').innerHTML=`<div class="grid two"><div class="card stack" style="grid-column:1/-1"><h2>Projection Map</h2><div id="projectionMap"></div></div>
     <div class="card stack"><h2>Income</h2>${persons.map(p=>`<div class="field"><label>${P[p].name} Monthly Income</label><input data-income="${p}" type="number" step="0.01" value="${inc(p)}"></div>`).join('')}</div>
+    <div class="card stack"><h2>Shared Moving Goal</h2><div class="grid three"><div class="field"><label>Goal name</label><input data-move-name value="${moveGoalName()}"></div><div class="field"><label>Current amount</label><input data-move-current type="number" step="0.01" value="${moveGoalCurrent()}"></div><div class="field"><label>Target</label><input data-move-target type="number" step="0.01" value="${moveGoalTarget()}"></div></div><p class="fine">This is treated as a shared household asset and can be renamed when the moving goal is complete.</p></div>
     <div class="card stack"><h2>Shared Category Budgets</h2>${cats().map(c=>`<div class="tile grid two"><div class="field"><label>Category name</label><input data-cat-name="${c.id}" value="${c.label}"></div><div class="field"><label>Monthly cap</label><input data-cat-budget="${c.id}" type="number" step="0.01" value="${c.budget}"></div></div>`).join('')}</div>
     <div class="card stack"><h2>APR Editor</h2>${allDebts().map(d=>`<div class="field"><label>${d.label}</label><input data-apr="${d.id}" type="number" step="0.01" value="${d.apr}"></div>`).join('')}</div>
     <div class="card stack"><h2>Allocation Percentages</h2>${persons.map(p=>`<h3>${P[p].name}</h3>${Object.keys(J('alloc:'+p,DEFAULTS[p].alloc)).map(k=>`<div class="field"><label>${k}</label><input data-alloc="${p}:${k}" type="number" step="0.1" value="${J('alloc:'+p,DEFAULTS[p].alloc)[k]}"></div>`).join('')}`).join('')}</div>
@@ -247,7 +257,8 @@ function renderSettings(){
 }
 function refreshHome(){
   const t=totals(), l=leftToSpend(); $('#homeLeft').textContent=money(l); $('#homeLeft').className='hero pv '+(l>=0?'green':'red'); $('#homePay').textContent=money(totalPay()); $('#homeSaved').textContent=money(totalSaved()); $('#homeSpent').textContent=money(totalSpent()); $('#homeAssets').textContent=money(t.assets); $('#homeDebt').textContent=money(t.debt); $('#homeNw').textContent=money(t.nw); $('#homeNw').className='mini pv '+(t.nw>=0?'green':'red'); $('#homeBurn').textContent=money(t.burn); $('#periodLine').textContent=`Daniel: ${activePeriod('daniel')} · Sonia: ${activePeriod('sonia')}`;
-  $('#capBars').innerHTML=cats().map(c=>{const d=spent('daniel',c.id), s=spent('sonia',c.id), total=d+s, cap=c.budget, left=cap-total, r=total/Math.max(1,cap), status=r>=1?'red':r>=.75?'amber':'green', dp=clamp(d/cap*100,0,100), sp=clamp(s/cap*100,0,100);return`<div class="cap-card stack"><div class="cap-head"><div><strong>${c.label}</strong><p class="fine">${money(total)} spent of ${money(cap)} cap</p></div><span class="pill ${status}">${left>=0?money(left)+' left':'Over '+money(Math.abs(left))}</span></div><div class="bar combo"><div class="seg d" style="width:${dp}%"></div><div class="seg s" style="left:${dp}%;width:${Math.min(sp,100-dp)}%"></div></div><div class="row fine pv"><span><i class="dot d"></i> Daniel ${money(d)}</span><span><i class="dot s"></i> Sonia ${money(s)}</span></div></div>`}).join('');
+  const mgCur=moveGoalCurrent(), mgTarget=moveGoalTarget(), mgR=clamp(mgCur/Math.max(1,mgTarget)*100,0,100); $('#moveGoalHomeTitle').textContent=moveGoalName(); $('#moveGoalHome').innerHTML=`<div class="bar"><div class="fill green" style="width:${mgR}%"></div></div><div class="row fine pv"><span>${money(mgCur)} saved</span><span>${money(mgTarget)} target</span></div>`;
+  $('#capBars').innerHTML=cats().map(c=>{const d=spent('daniel',c.id), s=spent('sonia',c.id), total=d+s, cap=c.budget, left=cap-total, r=total/Math.max(1,cap), status=r>=1?'red':r>=.75?'amber':'green', dp=clamp(d/cap*100,0,100), sp=clamp(s/cap*100,0,100);return`<div class="cap-card cap-compact stack"><div class="cap-head"><div><strong>${c.label}</strong><p class="fine pv">${money(total)} / ${money(cap)}</p></div><span class="pill ${status}">${left>=0?money(left)+' left':'Over '+money(Math.abs(left))}</span></div><div class="bar combo"><div class="seg d" style="width:${dp}%"></div><div class="seg s" style="left:${dp}%;width:${Math.min(sp,100-dp)}%"></div></div><div class="row fine pv"><span><i class="dot d"></i> ${money(d)}</span><span><i class="dot s"></i> ${money(s)}</span></div></div>`}).join('');
 }
 function refreshPerson(p){
   const sList=savingsList(p), personalSpent=cats().reduce((sum,c)=>sum+spent(p,c.id),0), latest=latestPay(p), sv=savedPeriod(p), left=latest-personalSpent-sv;
@@ -293,6 +304,9 @@ function bind(){
     const t=e.target;
     if(t.matches('[data-wallet]')){const [p,k]=t.dataset.wallet.split(':');S('w:'+p+':'+k,Number(t.value||0),true);refreshAll()}
     if(t.matches('[data-income]')){S('inc:'+t.dataset.income,Number(t.value||0),true);refreshAll()}
+    if(t.matches('[data-move-name]')){S('move:name',t.value,true);refreshAll()}
+    if(t.matches('[data-move-current]')){S('move:current',Number(t.value||0),true);refreshAll()}
+    if(t.matches('[data-move-target]')){S('move:target',Number(t.value||0),true);refreshAll()}
     if(t.matches('[data-cat-budget]')){S('cb:'+t.dataset.catBudget,Number(t.value||1),true);refreshAll()}
     if(t.matches('[data-cat-name]')){S('cat:name:'+t.dataset.catName,t.value,true);refreshAll()}
     if(t.matches('[data-apr]')){S('apr:'+t.dataset.apr,Number(t.value||0),true);refreshAll()}
