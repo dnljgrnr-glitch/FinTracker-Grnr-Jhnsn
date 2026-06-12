@@ -143,17 +143,20 @@ function activePeriod(p){return J('period:'+p,'No active period')}
 function totalPay(){return persons.reduce((s,p)=>s+latestPay(p),0)}
 function totalSpent(){return cats().reduce((s,c)=>s+persons.reduce((a,p)=>a+spent(p,c.id),0),0)}
 function totalSaved(){return persons.reduce((s,p)=>s+savedPeriod(p),0)}
-function moveGoalName(){return J('move:name','Moving Goal')}
-function moveGoalTarget(){return Number(J('move:target',1950))}
-function moveGoalCurrent(){
-  const fallback=(savingsList('daniel').find(x=>x.label==='Move Fund')?.current||0)+(savingsList('sonia').find(x=>x.label==='Move Fund')?.current||0);
-  return Number(J('move:current',fallback));
+function sharedGoals(){
+  return J('sharedGoals',[
+    {id:'move',name:'Moving Goal',current:1000,target:1950},
+    {id:'next',name:'Next Shared Goal',current:0,target:500}
+  ]);
 }
-function totalAssetsWithMove(){return totals().assets + moveGoalCurrent()}
+function sharedGoalTotal(){return sharedGoals().reduce((s,g)=>s+Number(g.current||0),0)}
+function sharedGoalTargetTotal(){return sharedGoals().reduce((s,g)=>s+Number(g.target||0),0)}
+function sharedGoalById(id){return sharedGoals().find(g=>g.id===id)}
+function saveSharedGoals(list){S('sharedGoals',list,true)}
 
 function totalCap(){return cats().reduce((s,c)=>s+c.budget,0)}
 function leftToSpend(){return totalPay()-totalSpent()-totalSaved()}
-function totals(){const debt=allDebts().reduce((s,d)=>s+bal(d.id),0), sav=allSavings().reduce((s,x)=>s+bal(x.id),0), move=moveGoalCurrent(), wallet=persons.reduce((s,p)=>s+Number(J('w:'+p+':c',0))+Number(J('w:'+p+':s',0)),0), assets=sav+move+wallet;return{debt,assets,nw:assets-debt,burn:allDebts().reduce((s,d)=>s+bal(d.id)*(d.apr/100/12),0)}}
+function totals(){const debt=allDebts().reduce((s,d)=>s+bal(d.id),0), sav=allSavings().reduce((s,x)=>s+bal(x.id),0), shared=sharedGoalTotal(), wallet=persons.reduce((s,p)=>s+Number(J('w:'+p+':c',0))+Number(J('w:'+p+':s',0)),0), assets=sav+shared+wallet;return{debt,assets,nw:assets-debt,burn:allDebts().reduce((s,d)=>s+bal(d.id)*(d.apr/100/12),0)}}
 function toast(m){const b=$('#toastbox'),d=document.createElement('div');d.className='toast';d.textContent=m;b.appendChild(d);setTimeout(()=>{d.style.opacity=0;d.style.transform='translateY(4px)'},2200);setTimeout(()=>d.remove(),2700)}
 function last(){const v=J('lastUpdated',null);$('#lastUpdated').textContent=v?'Saved '+new Date(v).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'Not saved yet'}
 function table(h,r){return`<div class="table-wrap"><table><thead><tr>${h.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${r.map(row=>`<tr>${row.map(c=>`<td class="${String(c).includes('$')?'pv':''}">${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`}
@@ -164,7 +167,7 @@ function renderHome(){
     <div class="card big stack" style="grid-column:1/-1"><p class="kicker">Together right now</p><div id="homeLeft" class="hero pv">—</div><p class="muted">Combined left from latest paychecks after recorded spending and savings.</p></div>
     <div class="card stack"><h2>Money Flow</h2><div class="grid flow-grid"><div class="tile"><div class="label">Paychecks</div><div id="homePay" class="stat green pv">—</div></div><div class="tile"><div class="label">Savings</div><div id="homeSaved" class="stat blue pv">—</div></div><div class="tile"><div class="label">Spending</div><div id="homeSpent" class="stat red pv">—</div></div></div><p id="periodLine" class="fine"></p></div>
     <div class="card stack"><h2>Household Position</h2><div class="grid two"><div class="tile"><div class="label">Assets</div><div id="homeAssets" class="mini green pv">—</div></div><div class="tile"><div class="label">Debt</div><div id="homeDebt" class="mini red pv">—</div></div><div class="tile"><div class="label">Net Worth</div><div id="homeNw" class="mini pv">—</div></div><div class="tile"><div class="label">Interest Burn</div><div id="homeBurn" class="mini red pv">—</div></div></div></div>
-    <div class="card stack"><h2 id="moveGoalHomeTitle">Moving Goal</h2><div id="moveGoalHome"></div></div>
+    <div class="card stack"><h2>Shared Goals</h2><div id="sharedGoalsHome" class="stack"></div></div>
     <div class="card stack" style="grid-column:1/-1"><h2>Household Spending Caps</h2><div id="capBars" class="stack"></div></div>
   </div>`;
 }
@@ -183,6 +186,7 @@ function renderPerson(p){
 function renderHousehold(){
   $('#household').innerHTML=`<div class="grid two">
     <div class="card stack" style="grid-column:1/-1"><h2>Bill Split Calculator</h2><p class="fine">Fully editable. Change the split, bill names, and bill amounts at any time.</p><div class="grid two"><div class="field"><label>Daniel %</label><input data-split="daniel" type="number" step="1" value="${J('split:daniel',59)}"></div><div class="field"><label>Sonia %</label><input data-split="sonia" type="number" step="1" value="${J('split:sonia',41)}"></div></div><div id="billRows" class="stack"></div><button class="btn" id="addBill">Add Bill</button></div>
+    <div class="card stack" style="grid-column:1/-1"><h2>Shared Goal Funds</h2><p class="fine">Use this for moving, tattoos, vacation, registrations, concerts, marathon/event fees, or any shared fund. These count as household assets and update Home.</p><div id="sharedGoalRows" class="stack"></div><button class="btn" id="addSharedGoal">Add Shared Goal</button></div>
     <div class="card stack"><h2>Household Totals</h2><div class="grid two"><div class="tile"><div class="label">Debt</div><div id="hhDebt" class="mini red pv">—</div></div><div class="tile"><div class="label">Assets</div><div id="hhAssets" class="mini green pv">—</div></div><div class="tile"><div class="label">Net Worth</div><div id="hhNw" class="mini pv">—</div></div><div class="tile"><div class="label">Interest Burn</div><div id="hhBurn" class="mini red pv">—</div></div></div></div>
     <div class="card stack"><h2>Debt Payoff Sequence</h2>${table(['Step','Priority','Reason'],DEFAULTS.debtSequence)}</div>
   </div>`;
@@ -248,7 +252,6 @@ function projectionTable(){
 function renderSettings(){
   $('#settings').innerHTML=`<div class="grid two"><div class="card stack" style="grid-column:1/-1"><h2>Projection Map</h2><div id="projectionMap"></div></div>
     <div class="card stack"><h2>Income</h2>${persons.map(p=>`<div class="field"><label>${P[p].name} Monthly Income</label><input data-income="${p}" type="number" step="0.01" value="${inc(p)}"></div>`).join('')}</div>
-    <div class="card stack"><h2>Shared Moving Goal</h2><div class="grid three"><div class="field"><label>Goal name</label><input data-move-name value="${moveGoalName()}"></div><div class="field"><label>Current amount</label><input data-move-current type="number" step="0.01" value="${moveGoalCurrent()}"></div><div class="field"><label>Target</label><input data-move-target type="number" step="0.01" value="${moveGoalTarget()}"></div></div><p class="fine">This is treated as a shared household asset and can be renamed when the moving goal is complete.</p></div>
     <div class="card stack"><h2>Shared Category Budgets</h2>${cats().map(c=>`<div class="tile grid two"><div class="field"><label>Category name</label><input data-cat-name="${c.id}" value="${c.label}"></div><div class="field"><label>Monthly cap</label><input data-cat-budget="${c.id}" type="number" step="0.01" value="${c.budget}"></div></div>`).join('')}</div>
     <div class="card stack"><h2>APR Editor</h2>${allDebts().map(d=>`<div class="field"><label>${d.label}</label><input data-apr="${d.id}" type="number" step="0.01" value="${d.apr}"></div>`).join('')}</div>
     <div class="card stack"><h2>Allocation Percentages</h2>${persons.map(p=>`<h3>${P[p].name}</h3>${Object.keys(J('alloc:'+p,DEFAULTS[p].alloc)).map(k=>`<div class="field"><label>${k}</label><input data-alloc="${p}:${k}" type="number" step="0.1" value="${J('alloc:'+p,DEFAULTS[p].alloc)[k]}"></div>`).join('')}`).join('')}</div>
@@ -257,7 +260,8 @@ function renderSettings(){
 }
 function refreshHome(){
   const t=totals(), l=leftToSpend(); $('#homeLeft').textContent=money(l); $('#homeLeft').className='hero pv '+(l>=0?'green':'red'); $('#homePay').textContent=money(totalPay()); $('#homeSaved').textContent=money(totalSaved()); $('#homeSpent').textContent=money(totalSpent()); $('#homeAssets').textContent=money(t.assets); $('#homeDebt').textContent=money(t.debt); $('#homeNw').textContent=money(t.nw); $('#homeNw').className='mini pv '+(t.nw>=0?'green':'red'); $('#homeBurn').textContent=money(t.burn); $('#periodLine').textContent=`Daniel: ${activePeriod('daniel')} · Sonia: ${activePeriod('sonia')}`;
-  const mgCur=moveGoalCurrent(), mgTarget=moveGoalTarget(), mgR=clamp(mgCur/Math.max(1,mgTarget)*100,0,100); $('#moveGoalHomeTitle').textContent=moveGoalName(); $('#moveGoalHome').innerHTML=`<div class="bar"><div class="fill green" style="width:${mgR}%"></div></div><div class="row fine pv"><span>${money(mgCur)} saved</span><span>${money(mgTarget)} target</span></div>`;
+  const goals=sharedGoals(), gTotal=sharedGoalTotal(), gTarget=sharedGoalTargetTotal(), gPct=clamp(gTotal/Math.max(1,gTarget)*100,0,100);
+  $('#sharedGoalsHome').innerHTML=`<div class="bar"><div class="fill green" style="width:${gPct}%"></div></div><div class="row fine pv"><span>${money(gTotal)} saved</span><span>${money(gTarget)} target</span></div>`+goals.slice(0,3).map(g=>`<div class="row fine pv"><span>${g.name}</span><strong>${money(g.current)} / ${money(g.target)}</strong></div>`).join('');
   $('#capBars').innerHTML=cats().map(c=>{const d=spent('daniel',c.id), s=spent('sonia',c.id), total=d+s, cap=c.budget, left=cap-total, r=total/Math.max(1,cap), status=r>=1?'red':r>=.75?'amber':'green', dp=clamp(d/cap*100,0,100), sp=clamp(s/cap*100,0,100);return`<div class="cap-card cap-compact stack"><div class="cap-head"><div><strong>${c.label}</strong><p class="fine pv">${money(total)} / ${money(cap)}</p></div><span class="pill ${status}">${left>=0?money(left)+' left':'Over '+money(Math.abs(left))}</span></div><div class="bar combo"><div class="seg d" style="width:${dp}%"></div><div class="seg s" style="left:${dp}%;width:${Math.min(sp,100-dp)}%"></div></div><div class="row fine pv"><span><i class="dot d"></i> ${money(d)}</span><span><i class="dot s"></i> ${money(s)}</span></div></div>`}).join('');
 }
 function refreshPerson(p){
@@ -272,6 +276,9 @@ function refreshPerson(p){
   const logs=log(p); $('#'+p+'PayLog').innerHTML=logs.length?table(['Date','Amount','Source','Period'],logs.slice().reverse().map(x=>[x.date,money(x.amount),x.source||'—',x.period||'—'])):'<p class="fine">No paycheck logged.</p>';
 }
 function refreshHousehold(){
+  const goals=sharedGoals();
+  const sgr=$('#sharedGoalRows');
+  if(sgr)sgr.innerHTML=goals.map((g,i)=>{const r=clamp(Number(g.current||0)/Math.max(1,Number(g.target||0))*100,0,100);return`<div class="cap-card stack"><div class="grid four"><div class="field"><label>Goal name</label><input data-shared-goal-name="${i}" value="${g.name}"></div><div class="field"><label>Current</label><input data-shared-goal-current="${i}" type="number" step="0.01" value="${g.current}"></div><div class="field"><label>Target</label><input data-shared-goal-target="${i}" type="number" step="0.01" value="${g.target}"></div><div style="display:flex;align-items:end"><button class="btn small danger" data-remove-shared-goal="${i}">Remove</button></div></div><div class="bar"><div class="fill green" style="width:${r}%"></div></div><div class="row fine pv"><span>${money(g.current)} saved</span><span>${money(g.target)} target</span></div></div>`}).join('');
   const t=totals(); $('#hhDebt').textContent=money(t.debt); $('#hhAssets').textContent=money(t.assets); $('#hhNw').textContent=money(t.nw); $('#hhNw').className='mini pv '+(t.nw>=0?'green':'red'); $('#hhBurn').textContent=money(t.burn);
   const sd=Number(J('split:daniel',59)), ss=Number(J('split:sonia',41)), totalPct=Math.max(1,sd+ss); let total=0;
   $('#billRows').innerHTML=bills().map((b,i)=>{total+=Number(b.amount||0);const ds=b.amount*(sd/totalPct), so=b.amount*(ss/totalPct);return`<div class="cap-card grid four"><div class="field"><label>Bill name</label><input data-bill-name="${i}" value="${b.label}"></div><div class="field"><label>Amount</label><input data-bill-amount="${i}" type="number" step="0.01" value="${b.amount}"></div><div><div class="label">Daniel</div><div class="mini blue pv">${money(ds)}</div></div><div><div class="label">Sonia</div><div class="mini green pv">${money(so)}</div></div><button class="btn small danger" data-remove-bill="${i}">Remove</button></div>`}).join('')+`<div class="row"><strong>Total Bills</strong><strong class="pv">${money(total)}</strong></div>`;
@@ -282,7 +289,7 @@ function addSpending(p,id){const input=$(`#${p}-${id}-add`), amount=Number(input
 function addSavings(p){const amount=Number($(`#${p}SavingsAdd`)?.value||0), id=$(`#${p}SavingsSelect`)?.value; if(amount<=0||!id){toast('Enter savings amount');return} S('sv:'+p,savedPeriod(p)+amount,true); S('b:'+id,bal(id)+amount,true); $(`#${p}SavingsAdd`).value=''; refreshAll(); toast('Savings recorded')}
 function recordDebt(id){const amount=Number($(`#pay-${id}`)?.value||0); if(amount<=0){toast('Enter payment amount');return} S('b:'+id,Math.max(0,bal(id)-amount),true); $(`#pay-${id}`).value=''; refreshAll(); toast('Debt payment recorded')}
 function showTab(id){$$('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));$$('.panel').forEach(p=>p.classList.toggle('active',p.id===id));$('#activeUserLine').textContent=id==='home'?'Household dashboard':id==='household'?'Shared bills and debt sequence':id==='settings'?'App settings':P[id].name+' workflow'}
-function collect(){const out={},pref=['b:','g:','w:','cs:','cb:','sv:','pay:','period:','inc:','bill','bills:','alloc:','split:','apr:','cat:','save:','debt:'];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(pref.some(p=>k.startsWith(p))||['pm','lastUpdated','lastProfile'].includes(k))out[k]=J(k,null)}return out}
+function collect(){const out={},pref=['b:','g:','w:','cs:','cb:','sv:','pay:','period:','inc:','bill','bills:','alloc:','split:','apr:','cat:','save:','debt:'];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(pref.some(p=>k.startsWith(p))||['pm','lastUpdated','lastProfile','sharedGoals'].includes(k))out[k]=J(k,null)}return out}
 function download(name,text,type){const blob=new Blob([text],{type}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();URL.revokeObjectURL(a.href);a.remove()}
 
 function bind(){
@@ -295,7 +302,9 @@ function bind(){
     const saveBtn=e.target.closest('[data-add-savings]'); if(saveBtn)addSavings(saveBtn.dataset.addSavings);
     const debtBtn=e.target.closest('[data-record-debt]'); if(debtBtn)recordDebt(debtBtn.dataset.recordDebt);
     if(e.target.id==='addBill'){const list=bills();list.push({id:'bill'+Date.now(),label:'New Bill',amount:0});S('bills:list',list,true);refreshAll()}
+    if(e.target.id==='addSharedGoal'){const list=sharedGoals();list.push({id:'goal'+Date.now(),name:'New Shared Goal',current:0,target:500});saveSharedGoals(list);refreshAll()}
     const rem=e.target.closest('[data-remove-bill]'); if(rem){const list=bills();list.splice(Number(rem.dataset.removeBill),1);S('bills:list',list,true);refreshAll()}
+    const rg=e.target.closest('[data-remove-shared-goal]'); if(rg){const list=sharedGoals();list.splice(Number(rg.dataset.removeSharedGoal),1);saveSharedGoals(list);refreshAll()}
     if(e.target.matches('[data-export="json"]'))download('daniel-sonia-financial-os.json',JSON.stringify(collect(),null,2),'application/json');
     if(e.target.matches('[data-export="csv"]')){const rows=[['key','value'],...Object.entries(collect()).map(([k,v])=>[k,JSON.stringify(v)])];download('daniel-sonia-financial-os.csv',rows.map(r=>r.map(x=>`"${String(x).replaceAll('"','""')}"`).join(',')).join('\n'),'text/csv')}
     if(e.target.id==='clearBtn'&&confirm('Clear all progress?')){Object.keys(localStorage).forEach(k=>localStorage.removeItem(k));location.reload()}
@@ -304,9 +313,7 @@ function bind(){
     const t=e.target;
     if(t.matches('[data-wallet]')){const [p,k]=t.dataset.wallet.split(':');S('w:'+p+':'+k,Number(t.value||0),true);refreshAll()}
     if(t.matches('[data-income]')){S('inc:'+t.dataset.income,Number(t.value||0),true);refreshAll()}
-    if(t.matches('[data-move-name]')){S('move:name',t.value,true);refreshAll()}
-    if(t.matches('[data-move-current]')){S('move:current',Number(t.value||0),true);refreshAll()}
-    if(t.matches('[data-move-target]')){S('move:target',Number(t.value||0),true);refreshAll()}
+    
     if(t.matches('[data-cat-budget]')){S('cb:'+t.dataset.catBudget,Number(t.value||1),true);refreshAll()}
     if(t.matches('[data-cat-name]')){S('cat:name:'+t.dataset.catName,t.value,true);refreshAll()}
     if(t.matches('[data-apr]')){S('apr:'+t.dataset.apr,Number(t.value||0),true);refreshAll()}
@@ -314,6 +321,9 @@ function bind(){
     if(t.matches('[data-split]')){S('split:'+t.dataset.split,Number(t.value||0),true);refreshAll()}
     if(t.matches('[data-bill-name]')){const list=bills();list[Number(t.dataset.billName)].label=t.value;S('bills:list',list,true);refreshAll()}
     if(t.matches('[data-bill-amount]')){const list=bills();list[Number(t.dataset.billAmount)].amount=Number(t.value||0);S('bills:list',list,true);refreshAll()}
+    if(t.matches('[data-shared-goal-name]')){const list=sharedGoals();list[Number(t.dataset.sharedGoalName)].name=t.value;saveSharedGoals(list);refreshAll()}
+    if(t.matches('[data-shared-goal-current]')){const list=sharedGoals();list[Number(t.dataset.sharedGoalCurrent)].current=Number(t.value||0);saveSharedGoals(list);refreshAll()}
+    if(t.matches('[data-shared-goal-target]')){const list=sharedGoals();list[Number(t.dataset.sharedGoalTarget)].target=Number(t.value||0);saveSharedGoals(list);refreshAll()}
     if(t.matches('[data-save-name]')){S('save:name:'+t.dataset.saveName,t.value,true);refreshAll()}
     if(t.matches('[data-save-goal]')){S('g:'+t.dataset.saveGoal,Number(t.value||0),true);refreshAll()}
     if(t.matches('[data-debt-name]')){S('debt:name:'+t.dataset.debtName,t.value,true);refreshAll()}
