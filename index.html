@@ -287,15 +287,145 @@ function last(){const v=J('lastUpdated',null);$('#lastUpdated').textContent=v?'S
 function table(h,r){return`<div class="table-wrap"><table><thead><tr>${h.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${r.map(row=>`<tr>${row.map(c=>`<td class="${String(c).includes('$')?'pv':''}">${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`}
 function bar(label,cur,max,cls='blue'){const r=clamp(cur/Math.max(1,max)*100,0,100), col=cls==='green'?'var(--green)':cls==='red'?'var(--red)':cls==='amber'?'var(--amber)':'var(--blue)';return`<div class="tile tight"><div class="row wrap"><strong>${label}</strong><span class="pill ${cls}">${pct(r)}</span></div><div class="bar"><div class="fill" style="width:${r}%;background:${col}"></div></div><div class="fine pv">${money(cur)} / ${money(max)}</div></div>`}
 
-function renderHome(){
-  $('#home').innerHTML=`<div class="grid two">
-    <div class="card big stack" style="grid-column:1/-1"><p class="kicker">Together right now</p><div id="homeLeft" class="hero pv">—</div><p class="muted">Combined left from latest paychecks after recorded spending and savings.</p></div>
-    <div class="card stack"><h2>Money Flow</h2><div class="grid flow-grid"><div class="tile"><div class="label">Paychecks</div><div id="homePay" class="stat green pv">—</div></div><div class="tile"><div class="label">Savings</div><div id="homeSaved" class="stat blue pv">—</div></div><div class="tile"><div class="label">Spending</div><div id="homeSpent" class="stat red pv">—</div></div></div><p id="periodLine" class="fine"></p></div>
-    <div class="card stack"><h2>Shared Goals</h2><div id="sharedGoalsHome" class="stack"></div></div>
-    <div class="card stack" style="grid-column:1/-1"><h2>Household Spending Caps</h2><div id="capBars" class="stack"></div><details class="fine"><summary>Budget adjustment when one category goes over</summary><div id="budgetAdjustment" class="stack"></div></details></div>
+
+function allocValue(p,key){const a=J('alloc:'+p,DEFAULTS[p].alloc);return Number(a[key]||0)}
+function allocAmount(p,key,amount=latestPay(p)){return amount*(allocValue(p,key)/100)}
+function personBillShare(p){
+  const sd=Number(J('split:daniel',59)), ss=Number(J('split:sonia',41)), totalPct=Math.max(1,sd+ss);
+  const billsTotal=bills().reduce((s,b)=>s+Number(b.amount||0),0);
+  return billsTotal*((p==='daniel'?sd:ss)/totalPct);
+}
+function personBillSetAside(p){return allocAmount(p,'Shared bills set-aside')}
+function combinedBillSetAside(){return persons.reduce((s,p)=>s+personBillSetAside(p),0)}
+function combinedDebtMinimums(){return persons.reduce((s,p)=>s+minDebtPaymentTotal(p),0)}
+function combinedIncome(){return persons.reduce((s,p)=>s+inc(p),0)}
+function combinedPaycheckPlanRows(){
+  return persons.map(p=>{
+    const latest=latestPay(p), a=J('alloc:'+p,DEFAULTS[p].alloc);
+    const assigned=Object.keys(a).reduce((s,k)=>s+latest*(Number(a[k]||0)/100),0);
+    return {p,latest,assigned,buffer:latest-assigned,alloc:a};
+  });
+}
+function householdStatusLabel(){
+  const l=leftToSpend(), billsTotal=bills().reduce((s,b)=>s+Number(b.amount||0),0), billSet=combinedBillSetAside();
+  if(l<0)return ['Over','red','Cash flow is negative for the active period.'];
+  if(billSet<billsTotal)return ['Bills not fully covered','amber','Shared bill set-aside is below the current bill target.'];
+  if(l<250)return ['Tight','amber','Bills may be covered, but the active buffer is thin.'];
+  return ['Safe','green','Shared flow is currently inside the guardrails.'];
+}
+function sharedPlanSummary(){
+  const rows=combinedPaycheckPlanRows();
+  return rows.map(x=>{
+    const name=P[x.p].name, cls=P[x.p].cls;
+    const allocationRows=Object.keys(x.alloc).map(k=>`<div class="alloc-row"><span>${k}</span><span class="pill">${x.alloc[k]}%</span><strong class="pv">${money(x.latest*(Number(x.alloc[k]||0)/100))}</strong></div>`).join('');
+    return `<div class="tile stack"><div class="row"><strong class="${cls}">${name}</strong><span class="pill ${cls} pv">${money(x.latest)}</span></div>${allocationRows}<div class="alloc-row"><strong>Buffer</strong><span></span><strong class="${x.buffer>=0?'green':'red'} pv">${money(x.buffer)}</strong></div></div>`;
+  }).join('');
+}
+function sharedBillsCoverageBlock(){
+  const total=bills().reduce((s,b)=>s+Number(b.amount||0),0), setAside=combinedBillSetAside(), remain=total-setAside;
+  const pctDone=clamp(setAside/Math.max(1,total)*100,0,100);
+  return `<div class="stack">
+    <div class="grid four">
+      <div class="tile"><div class="label">Bill target</div><div class="mini pv">${money(total)}</div></div>
+      <div class="tile"><div class="label">Set aside</div><div class="mini ${setAside>=total?'green':'amber'} pv">${money(setAside)}</div></div>
+      <div class="tile"><div class="label">Remaining</div><div class="mini ${remain<=0?'green':'red'} pv">${money(Math.max(0,remain))}</div></div>
+      <div class="tile"><div class="label">Coverage</div><div class="mini ${setAside>=total?'green':'amber'}">${pctDone.toFixed(0)}%</div></div>
+    </div>
+    <div class="bar"><div class="fill ${setAside>=total?'green':'amber'}" style="width:${pctDone}%"></div></div>
+    <div class="grid two">
+      <div class="tile"><div class="label">Daniel bill share</div><div class="mini blue pv">${money(personBillShare('daniel'))}</div><p class="fine pv">Set aside this period: ${money(personBillSetAside('daniel'))}</p></div>
+      <div class="tile"><div class="label">Sonia bill share</div><div class="mini green pv">${money(personBillShare('sonia'))}</div><p class="fine pv">Set aside this period: ${money(personBillSetAside('sonia'))}</p></div>
+    </div>
+  </div>`;
+}
+function transparencySnapshot(){
+  const t=totals(), ci=combinedIncome(), cdm=combinedDebtMinimums(), dti=ci>0?(cdm/ci*100):0;
+  return `<div class="grid four">
+    <div class="tile"><div class="label">Combined income</div><div class="mini green pv">${money(ci)}</div></div>
+    <div class="tile"><div class="label">Debt minimums</div><div class="mini red pv">${money(cdm)}</div></div>
+    <div class="tile"><div class="label">Combined DTI</div><div class="mini ${dtiClass(dti)}">${dti.toFixed(1)}%</div></div>
+    <div class="tile"><div class="label">Net worth</div><div class="mini ${t.nw>=0?'green':'red'} pv">${money(t.nw)}</div></div>
+    <div class="tile"><div class="label">Total assets</div><div class="mini green pv">${money(t.assets)}</div></div>
+    <div class="tile"><div class="label">Total debt</div><div class="mini red pv">${money(t.debt)}</div></div>
+    <div class="tile"><div class="label">Monthly interest burn</div><div class="mini red pv">${money(t.burn)}</div></div>
+    <div class="tile"><div class="label">Shared goals</div><div class="mini blue pv">${money(sharedGoalTotal())}</div></div>
+  </div>`;
+}
+function debtPriorityBlock(){
+  const ordered=DEFAULTS.debtSequence.map(x=>x[1]).join(' → ');
+  const debts=allDebts().map(d=>`<div class="cap-row"><div><strong>${d.label}</strong><small>${P[d.person].name} · APR ${Number(d.apr||0).toFixed(2)}% · min ${money(d.min||0)}</small></div><span class="pill ${P[d.person].cls}">${P[d.person].name}</span><strong class="pv">${money(bal(d.id))}</strong></div>`).join('');
+  return `<div class="stack"><p class="fine">Current sequence: ${ordered}</p>${debts}</div>`;
+}
+function homePaycheckCard(p){
+  return `<div class="card stack" data-pay-box="${p}">
+    <h2>${P[p].name} Paycheck</h2>
+    <p class="fine">Log income here together. This updates the shared command center and the ${P[p].name} detail page.</p>
+    <div class="grid">
+      <div class="field"><label>Paycheck amount</label><input data-pay-amount="${p}" type="number" step="0.01" placeholder="0.00"></div>
+      <div class="field"><label>Date</label><input data-pay-date="${p}" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
+      <div class="field"><label>Source</label><input data-pay-source="${p}" placeholder="${p==='daniel'?'RAC / VA':'Payroll'}"></div>
+    </div>
+    <button class="btn primary" data-save-pay="${p}">Save ${P[p].name} Paycheck</button>
+    <div class="tile"><div class="label">Latest active period</div><div class="mini ${P[p].cls} pv">${money(latestPay(p))}</div><p class="fine">${activePeriod(p)}</p></div>
   </div>`;
 }
 
+function renderHome(){
+  const status=householdStatusLabel();
+  $('#home').innerHTML=`<div class="grid two">
+    <div class="card big stack" style="grid-column:1/-1">
+      <p class="kicker">Shared command center</p>
+      <div class="hero ${status[1]} pv" id="homeLeft">—</div>
+      <p class="muted"><strong class="${status[1]}">${status[0]}</strong> · ${status[2]}</p>
+    </div>
+
+    ${homePaycheckCard('daniel')}
+    ${homePaycheckCard('sonia')}
+
+    <div class="card stack" style="grid-column:1/-1">
+      <h2>Shared Money Flow</h2>
+      <div class="grid flow-grid">
+        <div class="tile"><div class="label">Combined Paychecks</div><div id="homePay" class="stat green pv">—</div></div>
+        <div class="tile"><div class="label">Combined Savings</div><div id="homeSaved" class="stat blue pv">—</div></div>
+        <div class="tile"><div class="label">Combined Spending</div><div id="homeSpent" class="stat red pv">—</div></div>
+      </div>
+      <p id="periodLine" class="fine"></p>
+    </div>
+
+    <div class="card stack" style="grid-column:1/-1">
+      <h2>Combined Paycheck Plan</h2>
+      <p class="fine">Shared view of where both paychecks are assigned before spending happens.</p>
+      <div id="combinedPlan" class="grid two"></div>
+    </div>
+
+    <div class="card stack" style="grid-column:1/-1">
+      <h2>Shared Bills Coverage</h2>
+      <div id="sharedBillsCoverage"></div>
+    </div>
+
+    <div class="card stack" style="grid-column:1/-1">
+      <h2>Transparency Snapshot</h2>
+      <p class="fine">Shared view of income, debt, assets, net worth, and household pressure.</p>
+      <div id="transparencySnapshot"></div>
+    </div>
+
+    <div class="card stack">
+      <h2>Shared Goals</h2>
+      <div id="sharedGoalsHome" class="stack"></div>
+    </div>
+
+    <div class="card stack">
+      <h2>Debt Priority</h2>
+      <div id="debtPriorityHome"></div>
+    </div>
+
+    <div class="card stack" style="grid-column:1/-1">
+      <h2>Household Spending Caps</h2>
+      <div id="capBars" class="stack"></div>
+      <details class="fine"><summary>Budget adjustment when one category goes over</summary><div id="budgetAdjustment" class="stack"></div></details>
+    </div>
+  </div>`;
+}
 function danielBaselineCard(){
   const b=DANIEL_STATEMENT_BASELINE;
   const pressure=b.expensePressure.slice(0,8).map(x=>`<div class="alloc-row"><span>${x[0]}</span><span class="pill">${x[2]}</span><strong class="pv">${money(x[1])}</strong></div>`).join('');
@@ -488,13 +618,22 @@ function renderPerson(p){
   $('#'+p).innerHTML=`<div class="grid two">
     <div class="card big stack" style="grid-column:1/-1"><p class="kicker">${P[p].name} active period</p><div id="${p}Left" class="hero ${P[p].cls} pv">—</div><p id="${p}Period" class="fine"></p></div>
     ${p==='daniel'?danielBaselineCard():''}
-    <div class="card stack" style="grid-column:1/-1"><h2>Wallet</h2><div class="grid two"><div class="field"><label>Checking</label><input data-wallet="${p}:c" type="number" step="0.01" value="${J('w:'+p+':c',0)}"></div><div class="field"><label>Savings</label><input data-wallet="${p}:s" type="number" step="0.01" value="${J('w:'+p+':s',0)}"></div></div><div class="row"><span>Wallet total</span><strong id="${p}Wallet" class="${P[p].cls} pv">—</strong></div></div>
-    <div class="card stack"><h2>Start Here</h2><p class="fine">Log the paycheck. The Paycheck Plan updates immediately.</p><div class="grid"><div class="field"><label>Paycheck amount</label><input data-pay-amount="${p}" type="number" step="0.01" placeholder="0.00"></div><div class="field"><label>Date</label><input data-pay-date="${p}" type="date" value="${new Date().toISOString().slice(0,10)}"></div><div class="field"><label>Source</label><input data-pay-source="${p}" placeholder="${p==='daniel'?'RAC / VA':'Payroll'}"></div></div><button class="btn primary" data-save-pay="${p}">Save Paycheck + Reset ${P[p].name}</button></div>
-    <div class="card stack"><h2>Paycheck Plan</h2><p class="fine">Where the latest paycheck should go.</p><div id="${p}Alloc"></div></div>
-    <div class="card stack" style="grid-column:1/-1"><h2>Savings</h2><div class="grid three"><div class="field"><label>Add savings amount</label><input id="${p}SavingsAdd" type="number" step="0.01" placeholder="0.00"></div><div class="field"><label>Apply to savings goal</label><select id="${p}SavingsSelect"></select></div><div style="display:flex;align-items:end"><button class="btn green" data-add-savings="${p}" style="width:100%">Record Savings</button></div></div><div id="${p}Savings" class="grid two"></div></div>
-    <div class="card stack" style="grid-column:1/-1"><h2>Monthly Spending</h2><p class="fine">Add an amount to the category. The progress meter and Home cap bars update automatically.</p><div id="${p}Cats" class="stack"></div></div>
-    <div class="card stack"><h2>Debt Progress</h2><div id="${p}Debt"></div></div>
-    <div class="card stack" style="grid-column:1/-1"><h2>Paycheck Log</h2><div id="${p}PayLog"></div></div>
+    <div class="card stack" style="grid-column:1/-1" id="${p}-quicknav"><h2>Quick Jump</h2><div class="jump-chips">
+      <button class="jump-chip" data-jump="${p}-start">Start</button>
+      <button class="jump-chip" data-jump="${p}-plan">Plan</button>
+      <button class="jump-chip" data-jump="${p}-spend">Spend</button>
+      <button class="jump-chip" data-jump="${p}-wallet">Wallet</button>
+      <button class="jump-chip" data-jump="${p}-save">Save</button>
+      <button class="jump-chip" data-jump="${p}-debt">Debt</button>
+      <button class="jump-chip" data-jump="${p}-log">Log</button>
+    </div></div>
+    <details class="section-toggle" id="${p}-wallet"><summary>Wallet</summary><div class="card stack" style="grid-column:1/-1"><h2>Wallet</h2><div class="grid two"><div class="field"><label>Checking</label><input data-wallet="${p}:c" type="number" step="0.01" value="${J('w:'+p+':c',0)}"></div><div class="field"><label>Savings</label><input data-wallet="${p}:s" type="number" step="0.01" value="${J('w:'+p+':s',0)}"></div></div><div class="row"><span>Wallet total</span><strong id="${p}Wallet" class="${P[p].cls} pv">—</strong></div></div></details>
+    <div class="card stack" id="${p}-start" data-pay-box="${p}"><h2>Start Here</h2><p class="fine">Log the paycheck. The Paycheck Plan updates immediately.</p><div class="grid"><div class="field"><label>Paycheck amount</label><input data-pay-amount="${p}" type="number" step="0.01" placeholder="0.00"></div><div class="field"><label>Date</label><input data-pay-date="${p}" type="date" value="${new Date().toISOString().slice(0,10)}"></div><div class="field"><label>Source</label><input data-pay-source="${p}" placeholder="${p==='daniel'?'RAC / VA':'Payroll'}"></div></div><button class="btn primary" data-save-pay="${p}">Save Paycheck + Reset ${P[p].name}</button></div>
+    <div class="card stack" id="${p}-plan"><h2>Paycheck Plan</h2><p class="fine">Where the latest paycheck should go.</p><div id="${p}Alloc"></div></div>
+    <details class="section-toggle" id="${p}-save"><summary>Savings</summary><div class="card stack" style="grid-column:1/-1"><h2>Savings</h2><div class="grid three"><div class="field"><label>Add savings amount</label><input id="${p}SavingsAdd" type="number" step="0.01" placeholder="0.00"></div><div class="field"><label>Apply to savings goal</label><select id="${p}SavingsSelect"></select></div><div style="display:flex;align-items:end"><button class="btn green" data-add-savings="${p}" style="width:100%">Record Savings</button></div></div><div id="${p}Savings" class="grid two"></div></div></details>
+    <div class="card stack" style="grid-column:1/-1" id="${p}-spend"><h2>Monthly Spending</h2><p class="fine">Add an amount to the category. The progress meter and Home cap bars update automatically.</p><div id="${p}Cats" class="stack"></div></div>
+    <details class="section-toggle" id="${p}-debt"><summary>Debt Progress</summary><div class="card stack"><h2>Debt Progress</h2><div id="${p}Debt"></div></div></details>
+    <details class="section-toggle" id="${p}-log"><summary>Paycheck Log</summary><div class="card stack" style="grid-column:1/-1"><h2>Paycheck Log</h2><div id="${p}PayLog"></div></div></details>
   </div>`;
 }
 function renderHousehold(){
@@ -572,9 +711,29 @@ function renderSettings(){
   </div>`;
 }
 function refreshHome(){
-  const t=totals(), l=leftToSpend(); $('#homeLeft').textContent=money(l); $('#homeLeft').className='hero pv '+(l>=0?'green':'red'); $('#homePay').textContent=money(totalPay()); $('#homeSaved').textContent=money(totalSaved()); $('#homeSpent').textContent=money(totalSpent()); $('#periodLine').textContent=`Daniel: ${activePeriod('daniel')} · Sonia: ${activePeriod('sonia')}`;
+  const status=householdStatusLabel(), l=leftToSpend();
+  $('#homeLeft').textContent=money(l);
+  $('#homeLeft').className='hero pv '+status[1];
+  $('#homePay').textContent=money(totalPay());
+  $('#homeSaved').textContent=money(totalSaved());
+  $('#homeSpent').textContent=money(totalSpent());
+  $('#periodLine').textContent=`Daniel: ${activePeriod('daniel')} · Sonia: ${activePeriod('sonia')}`;
+
+  const combinedPlan=$('#combinedPlan');
+  if(combinedPlan)combinedPlan.innerHTML=sharedPlanSummary();
+
+  const billCov=$('#sharedBillsCoverage');
+  if(billCov)billCov.innerHTML=sharedBillsCoverageBlock();
+
+  const trans=$('#transparencySnapshot');
+  if(trans)trans.innerHTML=transparencySnapshot();
+
+  const debtHome=$('#debtPriorityHome');
+  if(debtHome)debtHome.innerHTML=debtPriorityBlock();
+
   const goals=sharedGoals(), gTotal=sharedGoalTotal(), gTarget=sharedGoalTargetTotal(), gPct=clamp(gTotal/Math.max(1,gTarget)*100,0,100);
-  $('#sharedGoalsHome').innerHTML=`<div class="bar"><div class="fill green" style="width:${gPct}%"></div></div><div class="row fine pv"><span>${money(gTotal)} saved</span><span>${money(gTarget)} target</span></div>`+goals.slice(0,3).map(g=>`<div class="row fine pv"><span>${g.name}</span><strong>${money(g.current)} / ${money(g.target)}</strong></div>`).join('');
+  $('#sharedGoalsHome').innerHTML=`<div class="bar"><div class="fill green" style="width:${gPct}%"></div></div><div class="row fine pv"><span>${money(gTotal)} saved</span><span>${money(gTarget)} target</span></div>`+goals.slice(0,5).map(g=>`<div class="row fine pv"><span>${g.name}</span><strong>${money(g.current)} / ${money(g.target)}</strong></div>`).join('');
+
   $('#capBars').innerHTML=cats().map(c=>{
     const d=spent('daniel',c.id), s=spent('sonia',c.id), total=d+s, cap=c.budget, left=cap-total, used=cap>0?(total/cap*100):0, status=used>=100?'red':used>=75?'amber':'green';
     return`<div class="cap-row">
@@ -604,11 +763,27 @@ function refreshHousehold(){
   $('#billRows').innerHTML=bills().map((b,i)=>{total+=Number(b.amount||0);const ds=b.amount*(sd/totalPct), so=b.amount*(ss/totalPct);return`<div class="cap-card grid four"><div class="field"><label>Bill name</label><input data-bill-name="${i}" value="${b.label}"></div><div class="field"><label>Amount</label><input data-bill-amount="${i}" type="number" step="0.01" value="${b.amount}"></div><div><div class="label">Daniel</div><div class="mini blue pv">${money(ds)}</div></div><div><div class="label">Sonia</div><div class="mini green pv">${money(so)}</div></div><button class="btn small danger" data-remove-bill="${i}">Remove</button></div>`}).join('')+`<div class="row"><strong>Total Bills</strong><strong class="pv">${money(total)}</strong></div>`;
 }
 function refreshAll(){refreshHome();persons.forEach(refreshPerson);refreshHousehold();if($('#playbook')){renderPlanTab();restorePlaybookChecks();}const ds=$('#dtiSnapshot');if(ds)ds.innerHTML=dtiSnapshot();const hp=$('#householdPositionSettings');if(hp)hp.innerHTML=householdPositionBlock();const pm=$('#projectionMap');if(pm)pm.innerHTML=projectionTable();const ba=$('#budgetAdjustment');if(ba)ba.innerHTML=categoryBudgetAdjustmentRows();last()}
-function savePay(p){const amount=Number($(`[data-pay-amount="${p}"]`).value||0); if(amount<=0){toast('Enter paycheck amount');return} const date=$(`[data-pay-date="${p}"]`).value||new Date().toISOString().slice(0,10), source=$(`[data-pay-source="${p}"]`).value||'', logs=log(p); logs.push({amount,date,source,period:date,ts:new Date().toISOString()}); S('pay:'+p,logs,true); S('period:'+p,date,true); cats().forEach(c=>localStorage.removeItem('cs:'+p+':'+c.id)); localStorage.removeItem('sv:'+p); refreshAll(); showTab(p); toast(`${P[p].name} paycheck saved`)}
+function savePay(p,sourceEl=null){
+  const box=sourceEl?.closest?.(`[data-pay-box="${p}"]`)||document;
+  const amount=Number($(`[data-pay-amount="${p}"]`,box)?.value||0);
+  if(amount<=0){toast('Enter paycheck amount');return}
+  const date=$(`[data-pay-date="${p}"]`,box)?.value||new Date().toISOString().slice(0,10);
+  const source=$(`[data-pay-source="${p}"]`,box)?.value||'';
+  const logs=log(p);
+  logs.push({amount,date,source,period:date,ts:new Date().toISOString()});
+  S('pay:'+p,logs,true);
+  S('period:'+p,date,true);
+  cats().forEach(c=>localStorage.removeItem('cs:'+p+':'+c.id));
+  localStorage.removeItem('sv:'+p);
+  $$(`[data-pay-box="${p}"] [data-pay-amount="${p}"]`).forEach(i=>i.value='');
+  refreshAll();
+  showTab('home');
+  toast(`${P[p].name} paycheck saved`);
+}
 function addSpending(p,id){const input=$(`#${p}-${id}-add`), amount=Number(input?.value||0); if(amount<=0){toast('Enter spending amount');return} S('cs:'+p+':'+id,spent(p,id)+amount,true); if(input)input.value=''; refreshAll(); toast('Spending recorded')}
 function addSavings(p){const amount=Number($(`#${p}SavingsAdd`)?.value||0), id=$(`#${p}SavingsSelect`)?.value; if(amount<=0||!id){toast('Enter savings amount');return} S('sv:'+p,savedPeriod(p)+amount,true); S('b:'+id,bal(id)+amount,true); $(`#${p}SavingsAdd`).value=''; refreshAll(); toast('Savings recorded')}
 function recordDebt(id){const amount=Number($(`#pay-${id}`)?.value||0); if(amount<=0){toast('Enter payment amount');return} S('b:'+id,Math.max(0,bal(id)-amount),true); $(`#pay-${id}`).value=''; refreshAll(); toast('Debt payment recorded')}
-function showTab(id){$$('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));$$('.panel').forEach(p=>p.classList.toggle('active',p.id===id));const labels={home:'Household dashboard',household:'Shared bills and debt sequence',settings:'App settings',playbook:'Paycheck operating playbook',daniel:'Daniel workflow',sonia:'Sonia workflow'};$('#activeUserLine').textContent=labels[id]||'Financial OS'}
+function showTab(id){$$('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));$$('.panel').forEach(p=>p.classList.toggle('active',p.id===id));const labels={home:'Household command center',household:'Shared bills and debt sequence',settings:'App settings',playbook:'Paycheck operating playbook',daniel:'Daniel detail page',sonia:'Sonia detail page'};$('#activeUserLine').textContent=labels[id]||'Financial OS'}
 function collect(){const out={},pref=['b:','g:','w:','cs:','cb:','sv:','pay:','period:','inc:','bill','bills:','alloc:','split:','apr:','cat:','save:','debt:'];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(pref.some(p=>k.startsWith(p))||['pm','lastUpdated','lastProfile','sharedGoals'].includes(k))out[k]=J(k,null)}return out}
 function download(name,text,type){const blob=new Blob([text],{type}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();URL.revokeObjectURL(a.href);a.remove()}
 
@@ -619,7 +794,7 @@ function bind(){
     const jump=e.target.closest('[data-jump]'); if(jump){document.getElementById(jump.dataset.jump)?.scrollIntoView({behavior:'smooth',block:'start'});}
     const mj=e.target.closest('[data-mobile-jump]'); if(mj){const active=document.querySelector('.panel.active')?.id; if(active==='daniel'||active==='sonia'){document.getElementById(active+'-'+mj.dataset.mobileJump)?.scrollIntoView({behavior:'smooth',block:'start'});}else{showTab('daniel');setTimeout(()=>document.getElementById('daniel-'+mj.dataset.mobileJump)?.scrollIntoView({behavior:'smooth',block:'start'}),50);}}
     const tab=e.target.closest('[data-tab]'); if(tab)showTab(tab.dataset.tab);
-    const pay=e.target.closest('[data-save-pay]'); if(pay)savePay(pay.dataset.savePay);
+    const pay=e.target.closest('[data-save-pay]'); if(pay)savePay(pay.dataset.savePay,pay);
     if(e.target.closest('[data-apply-daniel-baseline]'))applyStatementBaselineToDaniel();
     const spendBtn=e.target.closest('[data-add-spending]'); if(spendBtn){const [p,id]=spendBtn.dataset.addSpending.split(':');addSpending(p,id)}
     const saveBtn=e.target.closest('[data-add-savings]'); if(saveBtn)addSavings(saveBtn.dataset.addSavings);
