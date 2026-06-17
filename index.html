@@ -83,6 +83,76 @@ details{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06)
 @media(max-width:720px){body{padding-bottom:76px}.mobile-action-bar{display:block}}
 @media(max-width:520px){.jump-chip{font-size:.74rem;padding:7px 9px}}
 
+
+/* Allocation chart */
+.alloc-visual{display:grid;grid-template-columns:220px 1fr;gap:14px;align-items:center}
+.donut-wrap{display:flex;justify-content:center;align-items:center}
+.donut{
+  --size:200px;
+  width:var(--size);height:var(--size);position:relative;display:grid;place-items:center;
+}
+.donut svg{width:100%;height:100%;transform:rotate(-90deg)}
+.donut-hole{
+  position:absolute;inset:22%;border-radius:999px;
+  background:#1c1c1e;border:1px solid rgba(255,255,255,.06);
+  display:grid;place-items:center;text-align:center;padding:10px
+}
+.donut-hole strong{font-size:1.15rem;letter-spacing:-.03em}
+.alloc-legend{display:grid;gap:8px}
+.alloc-legend .legend-row{
+  display:grid;grid-template-columns:12px 1fr auto auto;gap:10px;align-items:center;
+  background:rgba(255,255,255,.04);padding:10px;border-radius:12px
+}
+.legend-dot{width:12px;height:12px;border-radius:999px}
+@media(max-width:760px){
+  .alloc-visual{grid-template-columns:1fr}
+  .donut{--size:180px}
+}
+
+
+/* Get Started Guide */
+.gsg-wrap{max-width:var(--max);margin:0 auto;}
+.gsg-head{margin-bottom:14px;}
+.gsg-title{font-size:1.25rem;font-weight:900;color:var(--text);margin:0 0 6px;letter-spacing:-.035em}
+.gsg-intro{font-size:.86rem;color:var(--muted);line-height:1.55;margin:0 0 14px;}
+.gsg-progwrap{display:flex;align-items:center;gap:12px;}
+.gsg-bar{flex:1;height:10px;background:rgba(255,255,255,.09);border-radius:999px;overflow:hidden;}
+.gsg-bar i{display:block;height:100%;width:0;background:var(--green);border-radius:999px;transition:width .25s;}
+.gsg-proglabel{font-size:.78rem;font-weight:900;color:var(--muted);white-space:nowrap;}
+.gsg-phase{background:var(--card);border:1px solid var(--line);border-radius:var(--r);margin-bottom:12px;overflow:hidden;border-left:5px solid var(--blue);box-shadow:0 2px 20px rgba(0,0,0,.24)}
+.gsg-phase.locked{opacity:.52;}
+.gsg-phead{padding:13px 15px;background:rgba(255,255,255,.035);}
+.gsg-ptag{font-size:.64rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;}
+.gsg-pt{font-size:1rem;font-weight:900;color:var(--text);margin:3px 0 0;letter-spacing:-.025em}
+.gsg-pcount{float:right;font-size:.74rem;font-weight:900;color:var(--muted);}
+.gsg-pnote{font-size:.76rem;color:var(--muted);line-height:1.5;margin-top:5px;}
+.gsg-lockmsg{font-size:.72rem;font-weight:900;color:var(--amber);margin-top:7px;display:none;}
+.gsg-phase.locked .gsg-lockmsg{display:block;}
+.gsg-row{display:flex;align-items:flex-start;gap:11px;padding:10px 15px;border-top:1px solid rgba(255,255,255,.06);cursor:pointer;user-select:none;}
+.gsg-row:hover{background:rgba(255,255,255,.04);}
+.gsg-check{width:20px;height:20px;border:2px solid rgba(235,235,245,.42);border-radius:6px;position:relative;flex-shrink:0;margin-top:1px;transition:.15s;}
+.gsg-row.done .gsg-check{background:var(--green);border-color:var(--green);}
+.gsg-row.done .gsg-check:after{content:"";position:absolute;left:6px;top:2px;width:5px;height:10px;border:solid #06150a;border-width:0 2px 2px 0;transform:rotate(45deg);}
+.gsg-label{font-size:.86rem;color:var(--text);line-height:1.45;}
+.gsg-row.done .gsg-label{color:var(--dim);text-decoration:line-through;}
+.gsg-ref{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:15px;margin-top:10px;}
+.gsg-reftitle{font-size:.72rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--text);margin:16px 0 8px;}
+.gsg-reftitle:first-child{margin-top:0;}
+.gsg-refnote{font-weight:700;color:var(--muted);letter-spacing:0;text-transform:none;}
+.gsg-djt{width:100%;border-collapse:collapse;font-size:.78rem;min-width:720px;}
+.gsg-djt th{background:rgba(255,255,255,.06);color:var(--text);text-align:left;padding:8px 10px;font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--line)}
+.gsg-djt td{padding:8px 10px;border-top:1px solid rgba(255,255,255,.055);color:var(--muted);}
+.gsg-djt tr:nth-child(even){background:rgba(255,255,255,.025);}
+.gsg-table-wrap{overflow:auto;border:1px solid var(--line);border-radius:12px}
+.gsg-mile{list-style:none;padding:0;margin:0;}
+.gsg-mile li{font-size:.82rem;color:var(--muted);line-height:1.5;padding:4px 0 4px 16px;position:relative;}
+.gsg-mile li:before{content:"";position:absolute;left:0;top:11px;width:7px;height:7px;border-radius:50%;background:var(--blue);}
+.gsg-mile li b{color:var(--text);}
+.gsg-key{font-size:.78rem;color:var(--muted);margin:10px 0 0;line-height:1.5;}
+.gsg-reset{margin-top:14px;border:1px solid rgba(255,69,58,.6);background:rgba(255,69,58,.12);color:#ff9f99;font-size:.78rem;font-weight:900;padding:8px 14px;border-radius:999px;cursor:pointer;}
+.gsg-location-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media(max-width:760px){.gsg-progwrap{display:grid}.gsg-location-grid{grid-template-columns:1fr}.gsg-djt{min-width:680px}}
+
 </style>
 </head>
 <body>
@@ -106,7 +176,8 @@ details{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06)
   <div class="actions"><span id="lastUpdated" class="saved"></span><button id="privacyBtn" class="btn">Hide $</button><button id="printBtn" class="btn">Print</button><button id="lockBtn" class="btn">Lock</button></div>
 </div></header>
 <nav class="nav"><div class="nav-in">
-  <button class="tab active" data-tab="home">Home</button>
+  <button class="tab active" data-tab="getstarted">Get Started</button>
+  <button class="tab" data-tab="home">Home</button>
   <button class="tab" data-tab="daniel">Daniel</button>
   <button class="tab" data-tab="sonia">Sonia</button>
   <button class="tab" data-tab="household">Household</button>
@@ -115,7 +186,8 @@ details{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06)
 </div></nav>
 
 <main>
-<section id="home" class="panel active"></section>
+<section id="getstarted" class="panel active"></section>
+<section id="home" class="panel"></section>
 <section id="daniel" class="panel"></section>
 <section id="sonia" class="panel"></section>
 <section id="household" class="panel"></section>
@@ -367,6 +439,51 @@ function homePaycheckCard(p){
     </div>
     <button class="btn primary" data-save-pay="${p}">Save ${P[p].name} Paycheck</button>
     <div class="tile"><div class="label">Latest active period</div><div class="mini ${P[p].cls} pv">${money(latestPay(p))}</div><p class="fine">${activePeriod(p)}</p></div>
+  </div>`;
+}
+
+
+function allocPieColors(){
+  return ['#0a84ff','#30d158','#ff9f0a','#ff453a','#64d2ff','#bf5af2','#ffd60a','#5e5ce6','#ac8e68','#66d4cf'];
+}
+function renderAllocDonut(p){
+  const amount = latestPay(p);
+  const alloc = J('alloc:'+p, DEFAULTS[p].alloc);
+  const keys = Object.keys(alloc);
+  if(!keys.length) return `<div class="fine">No allocation percentages set.</div>`;
+  const totalPct = keys.reduce((s,k)=>s+Number(alloc[k]||0),0);
+  const assigned = keys.reduce((s,k)=>s + amount*(Number(alloc[k]||0)/100),0);
+  const buffer = Math.max(0, amount - assigned);
+  const data = keys.map((k,i)=>({label:k,pct:Number(alloc[k]||0),amt:amount*(Number(alloc[k]||0)/100),color:allocPieColors()[i%allocPieColors().length]}));
+  if(buffer>0.005)data.push({label:'Buffer',pct:Math.max(0,100-totalPct),amt:buffer,color:'#8e8e93'});
+  const totalAmt = Math.max(amount, data.reduce((s,d)=>s+d.amt,0), 1);
+  const radius = 42, circ = 2*Math.PI*radius;
+  let offset = 0;
+  const segs = data.map(d=>{
+    const frac = d.amt/totalAmt;
+    const len = Math.max(0, frac*circ);
+    const out = `<circle cx="60" cy="60" r="${radius}" fill="none" stroke="${d.color}" stroke-width="16" stroke-linecap="butt" stroke-dasharray="${len} ${circ-len}" stroke-dashoffset="${-offset}"></circle>`;
+    offset += len;
+    return out;
+  }).join('');
+  const legend = data.map(d=>`<div class="legend-row"><span class="legend-dot" style="background:${d.color}"></span><span>${d.label}</span><span class="pill">${d.pct.toFixed(0)}%</span><strong class="pv">${money(d.amt)}</strong></div>`).join('');
+  return `<div class="alloc-visual">
+    <div class="donut-wrap">
+      <div class="donut">
+        <svg viewBox="0 0 120 120" aria-label="Allocation chart">
+          <circle cx="60" cy="60" r="${radius}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="16"></circle>
+          ${segs}
+        </svg>
+        <div class="donut-hole">
+          <div>
+            <div class="label">Assigned</div>
+            <strong class="pv">${money(assigned)}</strong>
+            <div class="fine pv">${money(buffer)} buffer</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="alloc-legend">${legend}</div>
   </div>`;
 }
 
@@ -629,7 +746,7 @@ function renderPerson(p){
     </div></div>
     <details class="section-toggle" id="${p}-wallet"><summary>Wallet</summary><div class="card stack" style="grid-column:1/-1"><h2>Wallet</h2><div class="grid two"><div class="field"><label>Checking</label><input data-wallet="${p}:c" type="number" step="0.01" value="${J('w:'+p+':c',0)}"></div><div class="field"><label>Savings</label><input data-wallet="${p}:s" type="number" step="0.01" value="${J('w:'+p+':s',0)}"></div></div><div class="row"><span>Wallet total</span><strong id="${p}Wallet" class="${P[p].cls} pv">—</strong></div></div></details>
     <div class="card stack" id="${p}-start" data-pay-box="${p}"><h2>Start Here</h2><p class="fine">Log the paycheck. The Paycheck Plan updates immediately.</p><div class="grid"><div class="field"><label>Paycheck amount</label><input data-pay-amount="${p}" type="number" step="0.01" placeholder="0.00"></div><div class="field"><label>Date</label><input data-pay-date="${p}" type="date" value="${new Date().toISOString().slice(0,10)}"></div><div class="field"><label>Source</label><input data-pay-source="${p}" placeholder="${p==='daniel'?'RAC / VA':'Payroll'}"></div></div><button class="btn primary" data-save-pay="${p}">Save Paycheck + Reset ${P[p].name}</button></div>
-    <div class="card stack" id="${p}-plan"><h2>Paycheck Plan</h2><p class="fine">Where the latest paycheck should go.</p><div id="${p}Alloc"></div></div>
+    <div class="card stack" id="${p}-plan"><h2>Paycheck Plan</h2><p class="fine">Where the latest paycheck should go. Enter or log a paycheck and the allocation visual updates live.</p><div id="${p}AllocChart"></div><div id="${p}Alloc"></div></div>
     <details class="section-toggle" id="${p}-save"><summary>Savings</summary><div class="card stack" style="grid-column:1/-1"><h2>Savings</h2><div class="grid three"><div class="field"><label>Add savings amount</label><input id="${p}SavingsAdd" type="number" step="0.01" placeholder="0.00"></div><div class="field"><label>Apply to savings goal</label><select id="${p}SavingsSelect"></select></div><div style="display:flex;align-items:end"><button class="btn green" data-add-savings="${p}" style="width:100%">Record Savings</button></div></div><div id="${p}Savings" class="grid two"></div></div></details>
     <div class="card stack" style="grid-column:1/-1" id="${p}-spend"><h2>Monthly Spending</h2><p class="fine">Add an amount to the category. The progress meter and Home cap bars update automatically.</p><div id="${p}Cats" class="stack"></div></div>
     <details class="section-toggle" id="${p}-debt"><summary>Debt Progress</summary><div class="card stack"><h2>Debt Progress</h2><div id="${p}Debt"></div></div></details>
@@ -783,12 +900,12 @@ function savePay(p,sourceEl=null){
 function addSpending(p,id){const input=$(`#${p}-${id}-add`), amount=Number(input?.value||0); if(amount<=0){toast('Enter spending amount');return} S('cs:'+p+':'+id,spent(p,id)+amount,true); if(input)input.value=''; refreshAll(); toast('Spending recorded')}
 function addSavings(p){const amount=Number($(`#${p}SavingsAdd`)?.value||0), id=$(`#${p}SavingsSelect`)?.value; if(amount<=0||!id){toast('Enter savings amount');return} S('sv:'+p,savedPeriod(p)+amount,true); S('b:'+id,bal(id)+amount,true); $(`#${p}SavingsAdd`).value=''; refreshAll(); toast('Savings recorded')}
 function recordDebt(id){const amount=Number($(`#pay-${id}`)?.value||0); if(amount<=0){toast('Enter payment amount');return} S('b:'+id,Math.max(0,bal(id)-amount),true); $(`#pay-${id}`).value=''; refreshAll(); toast('Debt payment recorded')}
-function showTab(id){$$('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));$$('.panel').forEach(p=>p.classList.toggle('active',p.id===id));const labels={home:'Household command center',household:'Shared bills and debt sequence',settings:'App settings',playbook:'Paycheck operating playbook',daniel:'Daniel detail page',sonia:'Sonia detail page'};$('#activeUserLine').textContent=labels[id]||'Financial OS'}
-function collect(){const out={},pref=['b:','g:','w:','cs:','cb:','sv:','pay:','period:','inc:','bill','bills:','alloc:','split:','apr:','cat:','save:','debt:'];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(pref.some(p=>k.startsWith(p))||['pm','lastUpdated','lastProfile','sharedGoals'].includes(k))out[k]=J(k,null)}return out}
+function showTab(id){$$('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));$$('.panel').forEach(p=>p.classList.toggle('active',p.id===id));const labels={getstarted:'Get Started guide',home:'Household command center',household:'Shared bills and debt sequence',settings:'App settings',playbook:'Paycheck operating playbook',daniel:'Daniel detail page',sonia:'Sonia detail page'};$('#activeUserLine').textContent=labels[id]||'Financial OS';if(id==='getstarted')renderGuide()}
+function collect(){const out={},pref=['b:','g:','w:','cs:','cb:','sv:','pay:','period:','inc:','bill','bills:','alloc:','split:','apr:','cat:','save:','debt:'];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(pref.some(p=>k.startsWith(p))||['pm','lastUpdated','lastProfile','sharedGoals','ck:getstarted'].includes(k))out[k]=J(k,null)}return out}
 function download(name,text,type){const blob=new Blob([text],{type}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();URL.revokeObjectURL(a.href);a.remove()}
 
 function bind(){
-  $('#loginForm').addEventListener('submit',e=>{e.preventDefault();const input=$('#passwordInput');if(input.value.trim().toUpperCase() === PASS){const profile=$('#profileSelect').value;sessionStorage.setItem('financeUnlocked','true');sessionStorage.setItem('activeProfile',profile);S('lastProfile',profile,true);$('#login').classList.add('hidden');showTab(profile);toast('Unlocked')}else{$('#loginError').textContent='Incorrect passcode.';input.select()}});
+  $('#loginForm').addEventListener('submit',e=>{e.preventDefault();const input=$('#passwordInput');if(input.value.trim().toUpperCase() === PASS){const profile=$('#profileSelect').value;sessionStorage.setItem('financeUnlocked','true');sessionStorage.setItem('activeProfile',profile);S('lastProfile',profile,true);$('#login').classList.add('hidden');showTab('getstarted');toast('Unlocked')}else{$('#loginError').textContent='Incorrect passcode.';input.select()}});
   $('#lockBtn').onclick=()=>{sessionStorage.clear();location.reload()}; $('#printBtn').onclick=()=>window.print(); $('#privacyBtn').onclick=()=>{const on=!document.body.classList.contains('pm');document.body.classList.toggle('pm',on);S('pm',on,true);$('#privacyBtn').textContent=on?'Show $':'Hide $'};
   document.addEventListener('click',e=>{
     const jump=e.target.closest('[data-jump]'); if(jump){document.getElementById(jump.dataset.jump)?.scrollIntoView({behavior:'smooth',block:'start'});}
@@ -829,11 +946,166 @@ function bind(){
   });
   document.addEventListener('change',e=>{const t=e.target;if(t.matches('[data-playcheck]')){S('playcheck:'+t.dataset.playcheck,t.checked,true)}if(t.id==='importFile'&&t.files[0]){const r=new FileReader();r.onload=()=>{try{const data=JSON.parse(r.result);Object.entries(data).forEach(([k,v])=>localStorage.setItem(k,JSON.stringify(v)));location.reload()}catch{toast('Import failed')}};r.readAsText(t.files[0])}});
 }
+
+var GSG_KEY = 'ck:getstarted';
+var GSG_PHASES = [
+  { n:1, tag:'THIS WEEK', color:'#2563a8', title:'Cut the fixed leaks',
+    note:'Frees ~$100–135/mo at near-zero lifestyle cost. This cash is not spending money — it reports straight to the Move Fund.',
+    items:[
+      {id:'p1a',label:'Cancel ChatGPT subscription'},
+      {id:'p1b',label:'Cancel Spotify'},
+      {id:'p1c',label:'Cancel Xbox Game Pass'},
+      {id:'p1d',label:'Downgrade Notion'},
+      {id:'p1e',label:'Cancel Planet Fitness in person (keep proof)'},
+      {id:'p1f',label:'Call Verizon — target $80–120/month'}
+    ]},
+  { n:2, tag:'PRE-MOVE', color:'#b8791a', title:'Finish the Move Fund to $1,950',
+    note:'Monthly surplus (~$855) plus the freed subscription cash go here first. No full Visa attack yet — the same dollar cannot fund two goals at once.',
+    items:[
+      {id:'p2a',label:'Load $300 into Bills Bucket on June 5'},
+      {id:'p2b',label:'Pay vehicle loan by June 20'},
+      {id:'p2c',label:'Route monthly surplus + freed cash to the Move Fund'},
+      {id:'p2d',label:'Keep NFCU Visa at zero new charges'},
+      {id:'p2e',label:'Build Move Fund to $1,950 by July 10'}
+    ]},
+  { n:3, tag:'DEBT-EXIT — PAYOFF CLOCK STARTS HERE', color:'#c0392b', title:'Start $700/mo on the Visa',
+    note:'Begins only once the Move Fund is secured at $1,950. The $700 costs just $247 above the Visa minimum, leaving ~$608/mo for Emergency Fund / buffer.',
+    items:[
+      {id:'p3a',label:'Confirm Move Fund secured at $1,950'},
+      {id:'p3b',label:'Start $700/month Visa payment'},
+      {id:'p3c',label:'Keep Apple Card at $50/month'},
+      {id:'p3d',label:'Keep Vehicle at $426.20/month'},
+      {id:'p3e',label:'Maintain zero new Visa charges'},
+      {id:'p3f',label:'Route ~$608/mo leftover to Emergency Fund / buffer'},
+      {id:'p3g',label:'Protect EasyStart Certificate until December 2026'}
+    ]},
+  { n:4, tag:'ROLLOVER — ~15 MONTHS IN', color:'#d2691e', title:'Roll the freed $700 forward',
+    note:'When the Visa hits $0, the freed $700 does not become lifestyle inflation.',
+    items:[
+      {id:'p4a',label:'Confirm Visa reaches $0'},
+      {id:'p4b',label:'Redirect the freed $700 onto the Vehicle loan (or Apple, if clearing the smaller balance first)'},
+      {id:'p4c',label:'Update FinTracker target payment to reflect the rollover'}
+    ]},
+  { n:5, tag:'WEALTH-BUILDING — ~MONTH 32–33', color:'#1f8a5b', title:'Turn the freed payment into capital',
+    note:'High-interest debt cleared. The freed $700+/mo becomes capital.',
+    items:[
+      {id:'p5a',label:'Confirm all debt cleared'},
+      {id:'p5b',label:'Open / fund HYSA emergency fund'},
+      {id:'p5c',label:'Start Roth IRA contributions'},
+      {id:'p5d',label:'Capture the 401(k) match'},
+      {id:'p5e',label:'Activate the investing projection in FinTracker'}
+    ]}
+];
+
+function gsgLoad(){ try { return JSON.parse(localStorage.getItem(GSG_KEY)) || {}; } catch(e){ return {}; } }
+function gsgSave(o){ try { localStorage.setItem(GSG_KEY, JSON.stringify(o)); localStorage.setItem('lastUpdated',JSON.stringify(new Date().toISOString())); last(); } catch(e){} }
+function gsgTotalItems(){ var t=0; for (var i=0;i<GSG_PHASES.length;i++){ t+=GSG_PHASES[i].items.length; } return t; }
+function gsgPhaseDone(phase, state){ for (var i=0;i<phase.items.length;i++){ if(!state[phase.items[i].id]) return false; } return true; }
+
+function renderGuide(){
+  var root=document.getElementById('getstarted');
+  if(!root)return;
+  root.innerHTML = '<section id="getStartedSection" class="gsg-wrap">'+
+    '<div class="gsg-head card">'+
+      '<h2 class="gsg-title">Get Started — Your Debt-Exit Plan</h2>'+
+      '<p class="gsg-intro">Work the phases in order. Move Fund first, then the Visa attack. Check off each step as you finish it. The Visa payoff clock only starts in Phase 3, once the Move Fund is secured.</p>'+
+      '<div class="gsg-progwrap"><div class="gsg-bar"><i id="gsgBarFill"></i></div><span id="gsgProgLabel" class="gsg-proglabel">0 of 26 complete</span></div>'+
+    '</div>'+
+    '<div id="gsgPhases"></div>'+
+    '<div class="gsg-ref">'+
+      '<h3 class="gsg-reftitle">Where Every Dollar Goes</h3>'+
+      '<div class="gsg-table-wrap"><table class="gsg-djt">'+
+        '<tr><th>Source</th><th>Amount</th><th>Job</th><th>When</th></tr>'+
+        '<tr><td>Monthly surplus (at minimums)</td><td>~$855/mo</td><td>Move Fund first, then Visa step-up</td><td>Phase 2 to 3</td></tr>'+
+        '<tr><td>Canceled subscriptions</td><td>~$74/mo</td><td>Move Fund, then debt attack</td><td>Phase 1 on</td></tr>'+
+        '<tr><td>Verizon reduction</td><td>~$20–60/mo</td><td>Move Fund, then debt attack</td><td>Phase 1 on</td></tr>'+
+        '<tr><td>Visa step-up (min to $700)</td><td>$247/mo</td><td>Direct Visa payment</td><td>Phase 3</td></tr>'+
+        '<tr><td>Left over while $700 Visa runs</td><td>~$608/mo</td><td>Emergency Fund / buffer</td><td>Phase 3</td></tr>'+
+        '<tr><td>Freed payment (debt cleared)</td><td>$700+/mo</td><td>HYSA / Roth IRA / 401(k) / investing</td><td>Phase 5</td></tr>'+
+      '</table></div>'+
+      '<h3 class="gsg-reftitle">Money Location Map</h3>'+
+      '<div class="gsg-location-grid">'+
+        '<div class="tile"><div class="label">Checking</div><strong>Active bills + weekly spending</strong><p class="fine">Money needed before the next paycheck.</p></div>'+
+        '<div class="tile"><div class="label">HYSA / Money Market</div><strong>Move Fund + Emergency Fund</strong><p class="fine">Protected cash that should not sit idle in checking.</p></div>'+
+        '<div class="tile"><div class="label">Debt Payments</div><strong>Visa attack + rollover</strong><p class="fine">High-interest debt gets the strongest early priority.</p></div>'+
+        '<div class="tile"><div class="label">401(k)</div><strong>Employer match</strong><p class="fine">Capture match when available through payroll.</p></div>'+
+        '<div class="tile"><div class="label">Roth IRA</div><strong>Long-term retirement</strong><p class="fine">After stability, contributions must be invested inside the account.</p></div>'+
+        '<div class="tile"><div class="label">Brokerage later</div><strong>Extra wealth-building</strong><p class="fine">After high-interest debt and cash foundation are handled.</p></div>'+
+      '</div>'+
+      '<h3 class="gsg-reftitle">Payoff Milestones <span class="gsg-refnote">(clock = from Phase 3 start)</span></h3>'+
+      '<ul class="gsg-mile">'+
+        '<li><b>Plan Month 1</b> — Post-move; $700 begins on the Visa.</li>'+
+        '<li><b>Plan Month 15</b> — Visa = $0; $700 rolls onto the Vehicle.</li>'+
+        '<li><b>Plan Month 23</b> — Apple Card clears.</li>'+
+        '<li><b>Month 32–33</b> — All debt gone (rollover-timing dependent); $700+ becomes free capital.</li>'+
+      '</ul>'+
+      '<p class="gsg-key">Visa: 15 mo at $700 vs 25 mo at minimum · $724 interest saved · $4.53/day Visa interest at start.</p>'+
+      '<button type="button" class="gsg-reset" onclick="gsgReset()">Reset guide</button>'+
+    '</div>'+
+  '</section>';
+  renderGuidePhases();
+}
+
+function renderGuidePhases(){
+  var state = gsgLoad();
+  var html = '';
+  var phase2Done = gsgPhaseDone(GSG_PHASES[1], state);
+  for (var i=0;i<GSG_PHASES.length;i++){
+    var ph = GSG_PHASES[i], doneCount = 0;
+    for (var j=0;j<ph.items.length;j++){ if(state[ph.items[j].id]) doneCount++; }
+    var locked = (ph.n >= 3 && !phase2Done) ? ' locked' : '';
+    html += '<div class="gsg-phase'+locked+'" style="border-left-color:'+ph.color+'">';
+    html += '<div class="gsg-phead">';
+    html += '<span class="gsg-pcount">'+doneCount+'/'+ph.items.length+'</span>';
+    html += '<div class="gsg-ptag" style="color:'+ph.color+'">PHASE '+ph.n+' · '+ph.tag+'</div>';
+    html += '<div class="gsg-pt">'+ph.title+'</div>';
+    html += '<div class="gsg-pnote">'+ph.note+'</div>';
+    html += '<div class="gsg-lockmsg">Complete the Move Fund (Phase 2) first.</div>';
+    html += '</div>';
+    for (var k=0;k<ph.items.length;k++){
+      var it = ph.items[k], done = state[it.id] ? ' done' : '';
+      html += '<div class="gsg-row'+done+'" id="gsg-row-'+it.id+'" onclick="toggleGuideItem(\''+it.id+'\')">';
+      html += '<span class="gsg-check"></span><span class="gsg-label">'+it.label+'</span>';
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+  var target=document.getElementById('gsgPhases');
+  if(target)target.innerHTML = html;
+  updateGuideProgress();
+}
+
+function toggleGuideItem(id){
+  var state = gsgLoad();
+  state[id] = !state[id];
+  gsgSave(state);
+  renderGuidePhases();
+}
+
+function updateGuideProgress(){
+  var state = gsgLoad(), total = gsgTotalItems(), done = 0;
+  for (var i=0;i<GSG_PHASES.length;i++){
+    for (var j=0;j<GSG_PHASES[i].items.length;j++){ if(state[GSG_PHASES[i].items[j].id]) done++; }
+  }
+  var pct = total ? Math.round(done/total*100) : 0;
+  var fill = document.getElementById('gsgBarFill');
+  var lab = document.getElementById('gsgProgLabel');
+  if (fill) fill.style.width = pct + '%';
+  if (lab) lab.textContent = done + ' of ' + total + ' complete';
+}
+
+function gsgReset(){
+  if (confirm('Reset the Get Started guide? This clears all checkmarks.')){
+    try { localStorage.removeItem(GSG_KEY); } catch(e){}
+    renderGuide();
+  }
+}
+
 function init(){
   if(J('pm',false)){document.body.classList.add('pm');$('#privacyBtn').textContent='Show $'}
-  const mam=$('#mobileActionMount'); if(mam)mam.innerHTML=mobileActionBar();renderHome();renderPerson('daniel');renderPerson('sonia');renderHousehold();renderPlanTab();restorePlaybookChecks();renderSettings();bind();refreshAll();
+  const mam=$('#mobileActionMount'); if(mam)mam.innerHTML=mobileActionBar();renderGuide();renderHome();renderPerson('daniel');renderPerson('sonia');renderHousehold();renderPlanTab();restorePlaybookChecks();renderSettings();bind();refreshAll();
   const profile=sessionStorage.getItem('activeProfile')||J('lastProfile','daniel');$('#profileSelect').value=profile;
-  if(sessionStorage.getItem('financeUnlocked')==='true'){$('#login').classList.add('hidden');showTab(profile)}
+  if(sessionStorage.getItem('financeUnlocked')==='true'){$('#login').classList.add('hidden');showTab('getstarted')}
   else setTimeout(()=>$('#passwordInput')?.focus(),0);
 }
 init();
