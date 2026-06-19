@@ -277,19 +277,19 @@ details{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06)
 const PASS = 'JASPER';
 const P={daniel:{name:'Daniel',cls:'blue',color:'var(--blue)'},sonia:{name:'Sonia',cls:'green',color:'var(--green)'}};
 const DEFAULTS={
-  daniel:{income:3425.22,alloc:{'Shared bills set-aside':25,'NFCU Visa':22,'Vehicle loan':13,'Move/Emergency savings':9,'Transportation':5,'Food/Personal':5},
-    debts:[{id:'d0',label:'NFCU Visa',balance:9315.95,apr:17,min:452.82},{id:'d1',label:'Vehicle Loan',balance:22010.21,apr:9.14,min:426.20},{id:'d2',label:'Apple Card',balance:930.39,apr:20,min:50}],
-    savings:[{id:'s0',label:'Move Fund',current:0,target:1950},{id:'s1',label:'Emergency Fund',current:0,target:5000},{id:'s4',label:'NFCU EasyStart Certificate',current:3648.52,target:3648.52}]},
+  daniel:{income:3200,alloc:{'Shared bills set-aside':25,'NFCU Visa':22,'Vehicle loan':13,'Move/Emergency savings':9,'Transportation':5,'Food/Personal':5},
+    debts:[{id:'d0',label:'NFCU Visa',balance:9315.95,apr:16.49,min:452.82},{id:'d1',label:'Vehicle Loan',balance:22010.21,apr:9.14,min:426.20},{id:'d2',label:'Apple Card',balance:930.39,apr:20,min:50}],
+    savings:[{id:'s0',label:'Move Fund',current:0,target:1950},{id:'s1',label:'Emergency Fund',current:0,target:5000},{id:'s4',label:'NFCU EasyStart Certificate',current:2240.98,target:2240.98,rate:3.870,weeklyDeposit:50,lastDeposit:'2026-06-16'}]},
   sonia:{income:2200,alloc:{'Shared bills set-aside':24,'NW Bank Loan':6,'Family Debt':9,'Emergency savings':5,'Transportation':6,'Food/Personal':6,'Personal spending':5},
     debts:[{id:'d3',label:'NW Bank Loan',balance:2266.02,apr:12.5,min:135.83},{id:'d4',label:'Family Debt',balance:10000,apr:0,min:200},{id:'d5',label:'Apple Card',balance:0,apr:20,min:0}],
     savings:[{id:'s2',label:'Emergency Fund',current:1000,target:2500},{id:'s3',label:'Sinking Fund',current:0,target:1000}]},
-  categories:[{id:'transport',label:'Transportation',budget:300,note:'Gas, parking, oil, small vehicle-related costs'},{id:'food',label:'Food & Groceries',budget:450,note:'Groceries and baseline household food'},{id:'dining',label:'Eating Out',budget:140,note:'Fast food, coffee, restaurants, snacks'},{id:'personal',label:'Personal Spending',budget:250,note:'Amazon, beauty, clothes, personal items'},{id:'bills',label:'Phone / Insurance / Subscriptions',budget:285,note:'Verizon, Progressive, subscriptions'},{id:'household',label:'Household / Misc.',budget:150,note:'Cleaning, household items, small shared needs'}],
+  categories:[{id:'transport',label:'Gas / Transport',budget:175,note:'Current plan cap: gas, transport, parking, small vehicle-related costs'},{id:'food',label:'Food & Personal',budget:150,note:'Current plan cap: food and personal essentials'},{id:'dining',label:'Fast Food',budget:60,note:'Current plan cap: fast food, coffee, restaurants, snacks'},{id:'personal',label:'Online Shopping',budget:50,note:'Current plan cap: Amazon, online shopping, impulse purchases'},{id:'bills',label:'Verizon + Subscriptions (Est.)',budget:214,note:'Estimate kept: Verizon about $140 plus subscriptions about $74'},{id:'household',label:'Unassigned / Misc. Buffer',budget:0,note:'No extra cap assigned in current plan'}],
   bills:[{id:'rent',label:'Rent',amount:800},{id:'electric',label:'Electric',amount:150},{id:'internet',label:'Internet',amount:50},{id:'groceries',label:'Groceries',amount:300}],
   debtSequence:[['1','Move Fund','Finish liquidity first so the move does not create new debt.'],['2','NW Bank Loan','Clear Sonia’s 12.50% debt after the cash floor is safe.'],['3','NFCU Visa','Highest active revolving balance and high APR.'],['4','Family Debt','Keep consistent repayment rhythm and preserve trust.'],['5','Emergency Funds','Build both cash buffers.'],['6','Vehicle Loan','Longer-term payoff after high-interest pressure drops.']]
 };
 
 const DANIEL_STATEMENT_BASELINE = {
-  incomeMonthly:3425.22,
+  incomeMonthly:3200,
   payrollWeekly:606.78,
   payrollMonthly:2629.38,
   vaMonthly:795.84,
@@ -604,6 +604,7 @@ function renderSavingsSlider(x){
     <div class="row wrap"><strong>${x.label}</strong><span class="pill green">${pct.toFixed(0)}% saved</span></div>
     <input class="ft-slider savings" data-savings-slider="${x.id}" type="range" min="0" max="${target.toFixed(2)}" step="0.01" value="${current.toFixed(2)}" aria-label="${x.label} savings slider">
     <div class="row fine pv"><span>Saved ${money(current)}</span><span>Needed ${money(remaining)} of ${money(target)}</span></div>
+    ${x.rate?`<div class="fine pv">Certificate dividend: ${Number(x.rate).toFixed(3)}% · weekly deposit ${money(x.weeklyDeposit||0)} · last deposit ${x.lastDeposit||'—'}</div>`:''}
     <div class="grid two"><div class="field"><label>Name</label><input data-save-name="${x.id}" value="${x.label}"></div><div class="field"><label>Target</label><input data-save-goal="${x.id}" type="number" step="0.01" value="${target.toFixed(2)}"></div></div>
   </div>`;
 }
@@ -1461,7 +1462,7 @@ function renderGuide(){
         '<li><b>Plan Month 23</b> — Apple Card clears.</li>'+
         '<li><b>Month 32–33</b> — All debt gone (rollover-timing dependent); $700+ becomes free capital.</li>'+
       '</ul>'+
-      '<p class="gsg-key">Visa: 15 mo at $700 vs 25 mo at minimum · $724 interest saved · $4.53/day Visa interest at start.</p>'+
+      '<p class="gsg-key">Visa: 15 mo at $700 vs 25 mo at minimum · $665 interest saved · $4.27/day Visa interest at start.</p>'+
       '<button type="button" class="gsg-reset" onclick="gsgReset()">Reset guide</button>'+
     '</div>'+
   '</section>';
