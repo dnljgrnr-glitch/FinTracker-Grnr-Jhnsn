@@ -228,6 +228,12 @@ details{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06)
 @media(max-width:860px){.paylog-row{grid-template-columns:1fr 1fr}.paylog-actions{justify-content:flex-start}}
 @media(max-width:520px){.paylog-row{grid-template-columns:1fr}}
 
+
+/* Playbook person switch */
+.playbook-switch-card{border:1px solid rgba(10,132,255,.22);background:rgba(10,132,255,.045)}
+.playbook-switch{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}
+@media(max-width:620px){.playbook-switch{grid-template-columns:1fr}}
+
 </style>
 </head>
 <body>
@@ -1025,11 +1031,88 @@ function restorePlaybookChecks(){
   $$('[data-playcheck]').forEach(cb=>{cb.checked=!!J('playcheck:'+cb.dataset.playcheck,false)});
 }
 
+
+function playbookPerson(){
+  const p=J('playbookPerson','daniel');
+  return p==='sonia'?'sonia':'daniel';
+}
+function setPlaybookPerson(p){
+  S('playbookPerson',p==='sonia'?'sonia':'daniel',true);
+  renderPlanTab();
+  restorePlaybookChecks();
+  toast((p==='sonia'?'Sonia':'Daniel')+' playbook loaded');
+}
+function playbookPayEstimate(p){
+  const latest=latestPay(p);
+  if(latest>0)return latest;
+  return p==='sonia'?inc(p)/2:inc(p)/4;
+}
+function playbookRows(p,amount){
+  const a=J('alloc:'+p,DEFAULTS[p].alloc);
+  return Object.keys(a).map(k=>[k,Number(a[k]||0),amount*(Number(a[k]||0)/100)]);
+}
+function playbookDebtOutcome(p){
+  if(p==='sonia'){
+    const nw=debtList('sonia').find(d=>d.id==='d3'), family=debtList('sonia').find(d=>d.id==='d4');
+    const nwPay=Math.max(Number(nw?.min||0),allocAmount('sonia','NW Bank Loan',inc('sonia')));
+    const famPay=Math.max(Number(family?.min||0),allocAmount('sonia','Family Debt',inc('sonia')));
+    const emerg=savingsList('sonia').find(x=>String(x.label).toLowerCase().includes('emergency')) || savingsList('sonia')[0];
+    return {primary:'NW Bank Loan',primaryMonthly:nwPay,primaryMonths:nw?estimateMonthsToPayoff(bal('d3'),nw.apr,nwPay):999,
+      secondary:'Family Debt',secondaryMonthly:famPay,secondaryMonths:family?estimateMonthsToPayoff(bal('d4'),family.apr,famPay):999,
+      savingsLabel:emerg?.label||'Emergency Fund',savingsMonthly:allocAmount('sonia','Emergency savings',inc('sonia')),
+      savingsMonths:emerg&&allocAmount('sonia','Emergency savings',inc('sonia'))>0?Math.ceil(Math.max(0,goal(emerg.id)-bal(emerg.id))/allocAmount('sonia','Emergency savings',inc('sonia'))):0};
+  }
+  const visa=debtList('daniel').find(d=>d.id==='d0'), vehicle=debtList('daniel').find(d=>d.id==='d1');
+  const visaMonthly=allocAmount('daniel','NFCU Visa',inc('daniel'));
+  const vehicleMonthly=Math.max(Number(vehicle?.min||0),allocAmount('daniel','Vehicle loan',inc('daniel')));
+  const mf=findDanielMoveFund();
+  const savingsMonthly=allocAmount('daniel','Move/Emergency savings',inc('daniel'));
+  return {primary:'NFCU Visa',primaryMonthly:visaMonthly,primaryMonths:visa?estimateMonthsToPayoff(bal('d0'),visa.apr,visaMonthly):999,
+    secondary:'Vehicle Loan',secondaryMonthly:vehicleMonthly,secondaryMonths:vehicle?estimateMonthsToPayoff(bal('d1'),vehicle.apr,vehicleMonthly):999,
+    savingsLabel:mf?.label||'Move Fund',savingsMonthly:savingsMonthly,
+    savingsMonths:mf&&savingsMonthly>0?Math.ceil(Math.max(0,goal(mf.id)-bal(mf.id))/savingsMonthly):0};
+}
+function playbookFirstTasks(p,pay){
+  if(p==='sonia')return [
+    ['Enter Sonia paycheck','Use the actual net amount. If no paycheck is logged yet, the playbook estimates from monthly income.'],
+    ['Set aside shared bills portion','Protect the 41% household share before personal spending.'],
+    ['Fund Emergency savings','Move the planned emergency savings amount before flexible spending.'],
+    ['Pay NW Bank Loan minimum or better','This is Sonia’s interest-bearing debt and should stay visible.'],
+    ['Pay Family Debt rhythm','Keep the agreed monthly rhythm consistent even though APR is 0%.'],
+    ['Record spending entries','Track food, transport, personal, and subscriptions against the current plan caps.']
+  ];
+  return [
+    ['Enter Daniel paycheck',`Use the actual net amount. Current model estimates ${money(pay)} when no paycheck is logged.`],
+    ['Check Paycheck Plan','Use the calculated amounts as instructions, not just information.'],
+    ['Move shared bills set-aside','This is the portion reserved for household bills, not extra spending money.'],
+    ['Record savings/shared goal','Use the savings or shared-goal section so assets/net worth update.'],
+    ['Record debt payment when made','Use Debt Progress so interest burn/projection updates.'],
+    ['Record spending entries','Add every category spend so Home shows the real household cap position.']
+  ];
+}
+function playbookGuardrails(p){
+  if(p==='sonia')return [
+    ['Emergency savings first','Do not let the emergency fund become leftover money. Move it early.'],
+    ['NW Bank Loan stays current','At 12.50% APR, this balance should keep priority after the shared-bill set-aside.'],
+    ['Family Debt stays consistent','Even at 0%, consistent payment protects trust and keeps the plan clean.'],
+    ['Personal spending gets named','Uncategorized spending should become Food & Personal, Fast Food, Online Shopping, or another cap immediately.'],
+    ['Shared goals are visible','If money moves toward the household, record it so the shared dashboard updates.']
+  ];
+  return [
+    ['Apple Cash / transfers','Allowed only when assigned to a bill, savings move, debt payment, or planned shared goal. Otherwise record it as Personal Spending immediately.'],
+    ['Convenience stops','Record under Transportation, Fast Food, or Food & Personal before it becomes invisible.'],
+    ['Vape / tobacco','Treat as Food & Personal or Online Shopping depending on purchase source. Cap it first; reduce later.'],
+    ['Subscriptions/apps','Keep Verizon/subscriptions visible and review monthly.'],
+    ['Retail / random buys','Record as Online Shopping unless it is clearly groceries/household.']
+  ];
+}
+
 function renderPlanTab(){
-  const pay=weeklyPaycheckEstimate();
-  const pRows=paycheckPlanRows();
-  const mRows=monthlyPlanRows();
-  const outcome=danielOutcomeProjection();
+  const p=playbookPerson();
+  const pay=playbookPayEstimate(p);
+  const pRows=playbookRows(p,pay);
+  const mRows=playbookRows(p,inc(p));
+  const outcome=playbookDebtOutcome(p);
 
   const paycheckRows=pRows.map(([k,pct,amount])=>{
     const plain=k==='Shared bills set-aside'?'Set aside for shared bills':k;
@@ -1042,46 +1125,40 @@ function renderPlanTab(){
   }).join('');
 
   const actionRules=[
-    ['Paycheck first','Enter paycheck before spending from it. The system cannot protect money that was already spent.'],
-    ['Move money before swiping','Shared bills, debt, and savings get handled before convenience spending.'],
-    ['Cap categories weekly','Gas, food, personal, and eating out are not judged after the month. They are watched every paycheck.'],
-    ['Overage gets absorbed','If one category goes over, the Home cap section tells you where the remaining cushion has to tighten.'],
+    ['Paycheck first','Enter the selected person’s paycheck before spending from it. The system cannot protect money that was already spent.'],
+    ['Move money before swiping','Shared bills, debt, and savings get handled before flexible spending.'],
+    ['Cap categories weekly','Gas, food, personal, fast food, and online shopping are watched every paycheck.'],
+    ['Overage gets absorbed','If one category goes over, the Home cap section shows where the remaining cushion has to tighten.'],
     ['Debt payment must be recorded','A payment only improves the system after you record it against the debt balance.']
   ].map((r,i)=>`<div class="cap-row"><div><strong>${i+1}. ${r[0]}</strong><small>${r[1]}</small></div><span class="pill ${i<2?'green':i<4?'amber':'blue'}">${i===0?'Start':i===1?'Move':i===2?'Track':i===3?'Adjust':'Update'}</span></div>`).join('');
 
-  const firstPaycheckTasks=[
-    ['Enter paycheck in Daniel tab',`Use the actual net amount. Current model uses ${money(pay)} as the latest payroll estimate.`],
-    ['Check Paycheck Plan','Use the calculated amounts as instructions, not just information.'],
-    ['Move shared bills set-aside','This is the portion reserved for household bills, not extra spending money.'],
-    ['Record savings/shared goal','Use the savings or shared-goal section so assets/net worth update.'],
-    ['Record debt payment when made','Use Debt Progress so interest burn/projection updates.'],
-    ['Record spending entries','Add every category spend so Home shows the real household cap position.']
-  ].map((r,i)=>`<label class="cap-row" style="cursor:pointer"><div><strong>${r[0]}</strong><small>${r[1]}</small></div><input type="checkbox" data-playcheck="${i}" style="width:22px;min-height:22px"></label>`).join('');
+  const firstPaycheckTasks=playbookFirstTasks(p,pay).map((r,i)=>`<label class="cap-row" style="cursor:pointer"><div><strong>${r[0]}</strong><small>${r[1]}</small></div><input type="checkbox" data-playcheck="${p}:${i}" style="width:22px;min-height:22px"></label>`).join('');
 
-  const guardrails=[
-    ['Apple Cash / transfers','Allowed only when assigned to a bill, savings move, debt payment, or planned shared goal. Otherwise record it as Personal Spending immediately.'],
-    ['Convenience stops','Record under Transportation, Eating Out, or Personal before it becomes invisible.'],
-    ['Vape / tobacco','Treat as Personal Spending. Cap it first; reduce later.'],
-    ['Subscriptions/apps','Keep them under Phone / Insurance / Subscriptions and review monthly.'],
-    ['Retail / random buys','Record as Personal Spending unless it is clearly Groceries/Household.']
-  ].map(r=>`<div class="cap-row"><div><strong>${r[0]}</strong><small>${r[1]}</small></div><span class="pill">Rule</span></div>`).join('');
+  const guardrails=playbookGuardrails(p).map(r=>`<div class="cap-row"><div><strong>${r[0]}</strong><small>${r[1]}</small></div><span class="pill">Rule</span></div>`).join('');
 
   $('#playbook').innerHTML=`<div class="grid two">
+    <div class="card stack playbook-switch-card" style="grid-column:1/-1">
+      <div class="playbook-switch">
+        <div><p class="kicker">Operating System</p><h2 style="margin:0">${P[p].name} Playbook</h2><p class="fine">Select whose paycheck workflow you want to run. The playbook will only show the selected person’s rules, debts, savings, and allocations.</p></div>
+        <div class="field"><label>Playbook person</label><select id="playbookPersonSelect" onchange="setPlaybookPerson(this.value)"><option value="daniel" ${p==='daniel'?'selected':''}>Daniel</option><option value="sonia" ${p==='sonia'?'selected':''}>Sonia</option></select></div>
+      </div>
+    </div>
+
     <div class="card big stack" style="grid-column:1/-1">
-      <p class="kicker">Operating System</p>
-      <div class="hero green pv">${money(DANIEL_STATEMENT_BASELINE.incomeMonthly)}</div>
-      <p class="muted">This tab turns the statement pattern into a repeatable paycheck workflow. The point is not to shame the spending. The point is to tell the paycheck what to do before the money leaks.</p>
+      <p class="kicker">${P[p].name} monthly baseline</p>
+      <div class="hero ${P[p].cls} pv">${money(inc(p))}</div>
+      <p class="muted">This tab turns ${P[p].name}'s paycheck into a repeatable workflow. The point is to assign money before it leaks.</p>
     </div>
 
     <div class="card stack">
       <h2>Paycheck Walkthrough</h2>
-      <p class="fine">Run this every time a paycheck lands.</p>
+      <p class="fine">Run this every time ${P[p].name}'s paycheck lands.</p>
       <div class="stack">${firstPaycheckTasks}</div>
     </div>
 
     <div class="card stack">
       <h2>Per-Paycheck Instructions</h2>
-      <p class="fine">Based on estimated current payroll of <span class="pv">${money(pay)}</span>. These amounts are the default move/pay/set-aside instructions.</p>
+      <p class="fine">Based on ${latestPay(p)>0?'latest logged paycheck':'estimated paycheck'} of <span class="pv">${money(pay)}</span>.</p>
       <div class="stack">${paycheckRows}</div>
     </div>
 
@@ -1092,32 +1169,32 @@ function renderPlanTab(){
 
     <div class="card stack">
       <h2>Monthly Plan</h2>
-      <p class="fine">Monthly equivalent using current income baseline. This is what the system should produce if each paycheck is routed correctly.</p>
+      <p class="fine">Monthly equivalent using ${P[p].name}'s current income baseline.</p>
       <div class="stack">${monthlyRows}</div>
     </div>
 
     <div class="card stack">
       <h2>Expected Outcomes</h2>
       <div class="grid two">
-        <div class="tile"><div class="label">Visa attack</div><div class="mini blue pv">${money(outcome.visaMonthly)}/mo</div><p class="fine">Estimated payoff: ${outcome.visaMonths>=999?'payment too low':outcome.visaMonths+' months'}</p></div>
-        <div class="tile"><div class="label">Vehicle set-aside</div><div class="mini blue pv">${money(outcome.vehicleMonthly)}/mo</div><p class="fine">Estimated payoff: ${outcome.vehicleMonths>=999?'payment too low':outcome.vehicleMonths+' months'}</p></div>
-        <div class="tile"><div class="label">Shared goal funding</div><div class="mini green pv">${money(outcome.savingsMonthly)}/mo</div><p class="fine">Current shared goal estimate: ${outcome.sharedGoalMonths} months</p></div>
-        <div class="tile"><div class="label">Guardrail target</div><div class="mini amber">No new damage</div><p class="fine">Primary short-term goal: avoid overdraft, new Visa charges, and unrecorded transfers.</p></div>
+        <div class="tile"><div class="label">${outcome.primary}</div><div class="mini ${P[p].cls} pv">${money(outcome.primaryMonthly)}/mo</div><p class="fine">Estimated payoff: ${outcome.primaryMonths>=999?'payment too low':outcome.primaryMonths+' months'}</p></div>
+        <div class="tile"><div class="label">${outcome.secondary}</div><div class="mini ${P[p].cls} pv">${money(outcome.secondaryMonthly)}/mo</div><p class="fine">Estimated payoff: ${outcome.secondaryMonths>=999?'payment too low':outcome.secondaryMonths+' months'}</p></div>
+        <div class="tile"><div class="label">${outcome.savingsLabel}</div><div class="mini green pv">${money(outcome.savingsMonthly)}/mo</div><p class="fine">Estimated target pace: ${outcome.savingsMonths||0} months</p></div>
+        <div class="tile"><div class="label">Guardrail target</div><div class="mini amber">No new damage</div><p class="fine">Primary short-term goal: avoid overdraft, new revolving debt, and unrecorded transfers.</p></div>
       </div>
     </div>
 
     <div class="card stack" style="grid-column:1/-1">
       <h2>Spending Guardrails</h2>
-      <p class="fine">These rules convert the bank-statement pattern into active category behavior.</p>
+      <p class="fine">These rules convert the plan into active behavior for ${P[p].name}.</p>
       <div class="stack">${guardrails}</div>
     </div>
 
     <div class="card stack" style="grid-column:1/-1">
       <h2>What To Do When Something Goes Off Plan</h2>
       <div class="grid three">
-        <div class="tile"><strong>Category over budget</strong><p class="fine">Do not ignore it. Home shows the household overage. Reduce the remaining cushions before spending again.</p></div>
-        <div class="tile"><strong>Missed debt move</strong><p class="fine">Record it as not yet paid by leaving the balance unchanged. The Projection Map will stay honest.</p></div>
-        <div class="tile"><strong>Unexpected expense</strong><p class="fine">Record it in the closest category first. Then decide whether it came from buffer, shared goal delay, or reduced personal spending.</p></div>
+        <div class="tile"><strong>Category over budget</strong><p class="fine">Do not ignore it. Home shows the overage. Reduce the remaining cushions before spending again.</p></div>
+        <div class="tile"><strong>Missed debt move</strong><p class="fine">Leave the balance unchanged until the payment is actually made and recorded.</p></div>
+        <div class="tile"><strong>Unexpected expense</strong><p class="fine">Record it in the closest category first. Then decide whether it comes from buffer, delayed savings, or reduced personal spending.</p></div>
       </div>
     </div>
 
@@ -1127,8 +1204,6 @@ function renderPlanTab(){
     </div>
   </div>`;
 }
-
-
 function applyStatementBaselineToDaniel(){
   S('inc:daniel',DANIEL_STATEMENT_BASELINE.incomeMonthly,true);
   S('b:d0',9315.95,true);
