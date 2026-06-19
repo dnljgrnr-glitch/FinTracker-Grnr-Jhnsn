@@ -191,6 +191,18 @@ details{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06)
 @media(max-width:860px){.mission-layout{grid-template-columns:1fr}.mission-rings{min-height:300px}.mission-stats{grid-template-columns:1fr 1fr}}
 @media(max-width:520px){.mission-stats{grid-template-columns:1fr}.mission-center-box{width:132px;height:132px}.mission-center-box strong{font-size:1.05rem}}
 
+
+/* Single paycheck console */
+.pay-console{border:1px solid rgba(10,132,255,.24);background:rgba(10,132,255,.045)}
+.pay-person-switch{display:grid;gap:8px}
+.pay-person-labels{display:flex;justify-content:space-between;align-items:center;font-size:.78rem;font-weight:900;color:var(--muted)}
+.pay-person-range{width:100%;min-height:8px;height:8px;padding:0;border:0;border-radius:999px;appearance:none;background:linear-gradient(90deg,var(--blue) 0%,var(--blue) 50%,var(--green) 50%,var(--green) 100%)}
+.pay-person-range::-webkit-slider-thumb{appearance:none;width:26px;height:26px;border-radius:50%;background:#fff;border:4px solid var(--blue);box-shadow:0 2px 12px rgba(0,0,0,.45)}
+.pay-person-range::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:#fff;border:4px solid var(--blue);box-shadow:0 2px 12px rgba(0,0,0,.45)}
+.pay-console-grid{grid-template-columns:1fr 1fr 1fr auto}
+@media(max-width:900px){.pay-console-grid{grid-template-columns:1fr 1fr}.pay-console-grid .btn{width:100%}}
+@media(max-width:560px){.pay-console-grid{grid-template-columns:1fr}}
+
 </style>
 </head>
 <body>
@@ -709,6 +721,60 @@ function refreshMissionControl(){
   if(el)el.innerHTML=renderMissionControlRings();
 }
 
+
+function homePaySelectedPerson(){
+  const raw=J('homePayPerson','daniel');
+  return raw==='sonia'?'sonia':'daniel';
+}
+function homePaycheckConsole(){
+  const selected=homePaySelectedPerson();
+  return `<div class="card stack pay-console" style="grid-column:1/-1" id="homePaycheckConsole">
+    <div class="row wrap"><div><h2 style="margin:0">Shared Paycheck Entry</h2><p class="fine">Use one paycheck input. Slide to choose Daniel or Sonia, then enter the paycheck details.</p></div><span id="homePaySelectedPill" class="pill ${P[selected].cls}">${P[selected].name} selected</span></div>
+    <div class="pay-person-switch">
+      <div class="pay-person-labels"><span class="blue">Daniel</span><span class="green">Sonia</span></div>
+      <input id="homePayPersonRange" class="pay-person-range" type="range" min="0" max="1" step="1" value="${selected==='sonia'?1:0}" oninput="homePayPersonChanged(this)">
+    </div>
+    <div class="grid pay-console-grid">
+      <div class="field"><label>Paycheck amount</label><input id="homePayAmount" type="number" step="0.01" placeholder="0.00"></div>
+      <div class="field"><label>Date</label><input id="homePayDate" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
+      <div class="field"><label>Source</label><input id="homePaySource" placeholder="${selected==='daniel'?'RAC / VA':'Payroll'}"></div>
+      <div style="display:flex;align-items:end"><button class="btn primary" type="button" onclick="saveHomePaycheck()">Save Paycheck</button></div>
+    </div>
+    <div class="grid two">
+      <div class="tile"><div class="label">Daniel latest</div><div class="mini blue pv">${money(latestPay('daniel'))}</div><p class="fine">${activePeriod('daniel')}</p></div>
+      <div class="tile"><div class="label">Sonia latest</div><div class="mini green pv">${money(latestPay('sonia'))}</div><p class="fine">${activePeriod('sonia')}</p></div>
+    </div>
+  </div>`;
+}
+function homePayPersonChanged(el){
+  const p=Number(el.value||0)===1?'sonia':'daniel';
+  S('homePayPerson',p,true);
+  const pill=$('#homePaySelectedPill');
+  if(pill){pill.textContent=P[p].name+' selected';pill.className='pill '+P[p].cls}
+  const src=$('#homePaySource');
+  if(src && !src.value)src.placeholder=p==='daniel'?'RAC / VA':'Payroll';
+}
+function saveHomePaycheck(){
+  const p=homePaySelectedPerson();
+  const amount=Number($('#homePayAmount')?.value||0);
+  if(amount<=0){toast('Enter paycheck amount');return}
+  const date=$('#homePayDate')?.value||new Date().toISOString().slice(0,10);
+  const source=$('#homePaySource')?.value||'';
+  const logs=log(p);
+  logs.push({amount,date,source,period:date,ts:new Date().toISOString()});
+  S('pay:'+p,logs,true);
+  S('period:'+p,date,true);
+  cats().forEach(c=>localStorage.removeItem('cs:'+p+':'+c.id));
+  localStorage.removeItem('sv:'+p);
+  const amt=$('#homePayAmount'), src=$('#homePaySource');
+  if(amt)amt.value='';
+  if(src)src.value='';
+  renderHome();
+  refreshAll();
+  showTab('home');
+  toast(P[p].name+' paycheck saved');
+}
+
 function renderHome(){
   const status=householdStatusLabel();
   $('#home').innerHTML=`<div class="grid two">
@@ -723,8 +789,7 @@ function renderHome(){
     ${combinedDebtSummaryCard()}
     ${interestBurnBreakdown()}
 
-    ${homePaycheckCard('daniel')}
-    ${homePaycheckCard('sonia')}
+    ${homePaycheckConsole()}
 
     <div class="card stack" style="grid-column:1/-1">
       <h2>Shared Money Flow</h2>
