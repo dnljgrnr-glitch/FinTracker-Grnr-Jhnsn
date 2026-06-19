@@ -203,6 +203,23 @@ details{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06)
 @media(max-width:900px){.pay-console-grid{grid-template-columns:1fr 1fr}.pay-console-grid .btn{width:100%}}
 @media(max-width:560px){.pay-console-grid{grid-template-columns:1fr}}
 
+
+/* 10/10 flow polish */
+.next-action-card{border:1px solid rgba(48,209,88,.28);background:linear-gradient(135deg,rgba(48,209,88,.10),rgba(10,132,255,.045));}
+.next-action-card.warn{border-color:rgba(255,214,10,.38);background:linear-gradient(135deg,rgba(255,214,10,.10),rgba(10,132,255,.035));}
+.next-action-card.danger{border-color:rgba(255,69,58,.45);background:linear-gradient(135deg,rgba(255,69,58,.11),rgba(10,132,255,.025));}
+.next-action-title{font-size:1.18rem;font-weight:950;letter-spacing:-.035em;margin:0}
+.next-action-big{font-size:clamp(1.45rem,4vw,2.4rem);font-weight:950;letter-spacing:-.055em;line-height:1}
+.home-support{grid-column:1/-1;background:transparent;border:0;padding:0;margin:0}
+.home-support>summary{list-style:none;cursor:pointer;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-weight:950;color:var(--text);letter-spacing:-.025em}
+.home-support>summary::-webkit-details-marker{display:none}
+.home-support>summary:after{content:'Open';font-size:.72rem;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:5px 8px;letter-spacing:0}
+.home-support[open]>summary:after{content:'Close'}
+.home-support-body{margin-top:10px}
+.home-primary-stack{grid-column:1/-1;display:grid;gap:12px}
+@media(max-width:720px){.next-action-card .grid.four{grid-template-columns:1fr 1fr}.next-action-big{font-size:1.55rem}}
+@media(max-width:500px){.next-action-card .grid.four{grid-template-columns:1fr}}
+
 </style>
 </head>
 <body>
@@ -648,7 +665,7 @@ function scheduleRefreshAll(){
   refreshQueued=true;
   (window.requestAnimationFrame||function(fn){setTimeout(fn,16)})(function(){
     refreshQueued=false;
-    refreshAll();
+    renderHome();refreshAll();
   });
 }
 
@@ -775,23 +792,84 @@ function saveHomePaycheck(){
   toast(P[p].name+' paycheck saved');
 }
 
+
+function nextActionState(){
+  const move=moveCountdownData();
+  const visa=bal('d0'), allDebt=totals().debt, phaseState=gsgLoad ? gsgLoad() : {};
+  const phase2Done = typeof gsgPhaseDone==='function' ? gsgPhaseDone(GSG_PHASES[1], phaseState) : false;
+  if(move.needed>0){
+    return {
+      cls:move.urgent?'danger':'warn',
+      label:'Next Action',
+      title:'Finish the Move Fund first',
+      amount:money(move.needed)+' needed',
+      note:`${move.days} days left · ${money(move.pace)} per paycheck pace`,
+      badge:move.urgent?'Urgent':'Phase 2'
+    };
+  }
+  if(visa>0){
+    return {
+      cls:'warn',
+      label:'Next Action',
+      title:'Run the Visa attack',
+      amount:money(visa)+' remaining',
+      note:'Keep zero new charges and hold the $700/month plan.',
+      badge:'Phase 3'
+    };
+  }
+  if(allDebt>0){
+    return {
+      cls:'warn',
+      label:'Next Action',
+      title:'Roll freed cash into the next debt',
+      amount:money(allDebt)+' household debt',
+      note:'Do not let the freed Visa payment become lifestyle inflation.',
+      badge:'Rollover'
+    };
+  }
+  return {
+    cls:'',
+    label:'Next Action',
+    title:'Shift into wealth-building',
+    amount:'Debt cleared',
+    note:'Route freed payments into HYSA, Roth IRA, 401(k), and investing.',
+    badge:'Phase 5'
+  };
+}
+function nextActionCard(){
+  const n=nextActionState();
+  return `<div class="card stack next-action-card ${n.cls}" style="grid-column:1/-1">
+    <div class="row wrap"><div><p class="kicker">${n.label}</p><h2 class="next-action-title">${n.title}</h2></div><span class="pill ${n.cls==='danger'?'red':n.cls==='warn'?'amber':'green'}">${n.badge}</span></div>
+    <div class="next-action-big pv">${n.amount}</div>
+    <p class="fine">${n.note}</p>
+    <div class="grid four">
+      <div class="tile"><div class="label">Move Fund Needed</div><div class="mini ${moveCountdownData().needed>0?'amber':'green'} pv">${money(moveCountdownData().needed)}</div></div>
+      <div class="tile"><div class="label">Visa Balance</div><div class="mini red pv">${money(bal('d0'))}</div></div>
+      <div class="tile"><div class="label">Interest/mo</div><div class="mini red pv">${money(totals().burn)}</div></div>
+      <div class="tile"><div class="label">Net Worth</div><div class="mini ${totals().nw>=0?'green':'red'} pv">${money(totals().nw)}</div></div>
+    </div>
+  </div>`;
+}
+function homeSupport(title,inner,open=false){
+  return `<details class="home-support" ${open?'open':''}><summary>${title}</summary><div class="home-support-body">${inner}</div></details>`;
+}
+
 function renderHome(){
   const status=householdStatusLabel();
   $('#home').innerHTML=`<div class="grid two">
-    <div class="card big stack" style="grid-column:1/-1">
-      <p class="kicker">Shared command center</p>
-      <div class="hero ${status[1]} pv" id="homeLeft">—</div>
-      <p class="muted"><strong class="${status[1]}">${status[0]}</strong> · ${status[2]}</p>
-    </div>
+    ${nextActionCard()}
 
     ${missionControlSection()}
-    ${moveCountdownCard()}
-    ${combinedDebtSummaryCard()}
-    ${interestBurnBreakdown()}
 
     ${homePaycheckConsole()}
 
-    <div class="card stack" style="grid-column:1/-1">
+    ${homeSupport('Move Fund Countdown', moveCountdownCard())}
+
+    ${homeSupport('Interest Burn', interestBurnBreakdown())}
+
+    ${homeSupport('Combined Debt Summary', combinedDebtSummaryCard())}
+
+    ${homeSupport('Shared Money Flow', `<div class="card stack" style="grid-column:1/-1">
       <h2>Shared Money Flow</h2>
       <div class="grid flow-grid">
         <div class="tile"><div class="label">Combined Paychecks</div><div id="homePay" class="stat green pv">—</div></div>
@@ -799,40 +877,40 @@ function renderHome(){
         <div class="tile"><div class="label">Combined Spending</div><div id="homeSpent" class="stat red pv">—</div></div>
       </div>
       <p id="periodLine" class="fine"></p>
-    </div>
+    </div>`)}
 
-    <div class="card stack" style="grid-column:1/-1">
+    ${homeSupport('Combined Paycheck Plan', `<div class="card stack" style="grid-column:1/-1">
       <h2>Combined Paycheck Plan</h2>
       <p class="fine">Shared view of where both paychecks are assigned before spending happens.</p>
       <div id="combinedPlan" class="grid two"></div>
-    </div>
+    </div>`)}
 
-    <div class="card stack" style="grid-column:1/-1">
+    ${homeSupport('Shared Bills Coverage', `<div class="card stack" style="grid-column:1/-1">
       <h2>Shared Bills Coverage</h2>
       <div id="sharedBillsCoverage"></div>
-    </div>
+    </div>`)}
 
-    <div class="card stack" style="grid-column:1/-1">
+    ${homeSupport('Transparency Snapshot', `<div class="card stack" style="grid-column:1/-1">
       <h2>Transparency Snapshot</h2>
       <p class="fine">Shared view of income, debt, assets, net worth, and household pressure.</p>
       <div id="transparencySnapshot"></div>
-    </div>
+    </div>`)}
 
-    <div class="card stack">
+    ${homeSupport('Shared Goals', `<div class="card stack">
       <h2>Shared Goals</h2>
       <div id="sharedGoalsHome" class="stack"></div>
-    </div>
+    </div>`)}
 
-    <div class="card stack">
+    ${homeSupport('Debt Priority', `<div class="card stack">
       <h2>Debt Priority</h2>
       <div id="debtPriorityHome"></div>
-    </div>
+    </div>`)}
 
-    <div class="card stack" style="grid-column:1/-1">
+    ${homeSupport('Household Spending Caps', `<div class="card stack" style="grid-column:1/-1">
       <h2>Household Spending Caps</h2>
       <div id="capBars" class="stack"></div>
       <details class="fine"><summary>Budget adjustment when one category goes over</summary><div id="budgetAdjustment" class="stack"></div></details>
-    </div>
+    </div>`)}
   </div>`;
 }
 function danielBaselineCard(){
@@ -1125,10 +1203,10 @@ function refreshHome(){
   $('#homeLeft').textContent=money(l);
   $('#homeLeft').className='hero pv '+status[1];
   refreshMissionControl();
-  $('#homePay').textContent=money(totalPay());
-  $('#homeSaved').textContent=money(totalSaved());
-  $('#homeSpent').textContent=money(totalSpent());
-  $('#periodLine').textContent=`Daniel: ${activePeriod('daniel')} · Sonia: ${activePeriod('sonia')}`;
+  if($('#homePay'))$('#homePay').textContent=money(totalPay());
+  if($('#homeSaved'))$('#homeSaved').textContent=money(totalSaved());
+  if($('#homeSpent'))$('#homeSpent').textContent=money(totalSpent());
+  if($('#periodLine'))$('#periodLine').textContent=`Daniel: ${activePeriod('daniel')} · Sonia: ${activePeriod('sonia')}`;
 
   const combinedPlan=$('#combinedPlan');
   if(combinedPlan)combinedPlan.innerHTML=sharedPlanSummary();
@@ -1143,9 +1221,9 @@ function refreshHome(){
   if(debtHome)debtHome.innerHTML=debtPriorityBlock();
 
   const goals=sharedGoals(), gTotal=sharedGoalTotal(), gTarget=sharedGoalTargetTotal(), gPct=clamp(gTotal/Math.max(1,gTarget)*100,0,100);
-  $('#sharedGoalsHome').innerHTML=`<div class="bar"><div class="fill green" style="width:${gPct}%"></div></div><div class="row fine pv"><span>${money(gTotal)} saved</span><span>${money(gTarget)} target</span></div>`+goals.slice(0,5).map(g=>`<div class="row fine pv"><span>${g.name}</span><strong>${money(g.current)} / ${money(g.target)}</strong></div>`).join('');
+  if($('#sharedGoalsHome'))$('#sharedGoalsHome').innerHTML=`<div class="bar"><div class="fill green" style="width:${gPct}%"></div></div><div class="row fine pv"><span>${money(gTotal)} saved</span><span>${money(gTarget)} target</span></div>`+goals.slice(0,5).map(g=>`<div class="row fine pv"><span>${g.name}</span><strong>${money(g.current)} / ${money(g.target)}</strong></div>`).join('');
 
-  $('#capBars').innerHTML=cats().map(c=>{
+  if($('#capBars'))$('#capBars').innerHTML=cats().map(c=>{
     const d=spent('daniel',c.id), s=spent('sonia',c.id), total=d+s, cap=c.budget, left=cap-total, used=cap>0?(total/cap*100):0, status=used>=100?'red':used>=75?'amber':'green';
     return`<div class="cap-row">
       <div><strong>${c.label}</strong><small class="pv">Daniel ${money(d)} · Sonia ${money(s)} · cap ${money(cap)}</small></div>
