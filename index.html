@@ -171,6 +171,26 @@ details{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06)
 .summary-card{border:1px solid rgba(10,132,255,.22);background:rgba(10,132,255,.045)}
 .perf-note{font-size:.72rem;color:var(--dim)}
 
+
+/* Mission Control Rings */
+.mission-card{background:radial-gradient(circle at 50% 30%,rgba(10,132,255,.13),rgba(255,255,255,.035) 42%,rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.08)}
+.mission-layout{display:grid;grid-template-columns:minmax(280px,420px) 1fr;gap:16px;align-items:center}
+.mission-rings{display:grid;place-items:center;min-height:360px}
+.mission-svg{width:min(100%,390px);height:auto;overflow:visible}
+.ring-bg{stroke:rgba(255,255,255,.08);fill:none}
+.ring-fill{fill:none;stroke-linecap:round;transition:stroke-dasharray .28s ease,stroke-dashoffset .28s ease}
+.mission-center{position:absolute;display:grid;place-items:center;text-align:center;pointer-events:none}
+.mission-wrap{position:relative;display:grid;place-items:center}
+.mission-center-box{width:150px;height:150px;border-radius:999px;background:rgba(28,28,30,.92);border:1px solid rgba(255,255,255,.08);display:grid;place-items:center;padding:14px;box-shadow:0 8px 28px rgba(0,0,0,.38)}
+.mission-center-box strong{font-size:1.22rem;letter-spacing:-.04em;line-height:1.05}
+.mission-center-box .burn{font-size:.78rem;color:var(--red);font-weight:850;margin-top:4px}
+.mission-legend{display:grid;gap:8px}
+.mission-legend-row{display:grid;grid-template-columns:12px 1fr auto;gap:10px;align-items:center;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.05);border-radius:12px;padding:10px}
+.mission-dot{width:12px;height:12px;border-radius:999px}
+.mission-stats{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media(max-width:860px){.mission-layout{grid-template-columns:1fr}.mission-rings{min-height:300px}.mission-stats{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.mission-stats{grid-template-columns:1fr}.mission-center-box{width:132px;height:132px}.mission-center-box strong{font-size:1.05rem}}
+
 </style>
 </head>
 <body>
@@ -620,6 +640,75 @@ function scheduleRefreshAll(){
   });
 }
 
+
+function missionProgressDebt(id){
+  const start=Math.max(goal(id),bal(id),1), current=clamp(bal(id),0,start);
+  return clamp((1-(current/start))*100,0,100);
+}
+function missionProgressSavings(ids){
+  let current=0,target=0;
+  ids.forEach(id=>{current+=bal(id);target+=goal(id)});
+  return {current,target,progress:clamp(current/Math.max(1,target)*100,0,100)};
+}
+function missionRingData(){
+  const move=missionProgressSavings(['s0']);
+  const emergency=missionProgressSavings(['s1','s2']);
+  return [
+    {label:'Move Fund',type:'savings',color:'#30d158',progress:move.progress,current:move.current,target:move.target,detail:`${money(move.current)} / ${money(move.target)}`},
+    {label:'Emergency Savings',type:'savings',color:'#66d4cf',progress:emergency.progress,current:emergency.current,target:emergency.target,detail:`${money(emergency.current)} / ${money(emergency.target)}`},
+    {label:'NW Loan',type:'debt',color:'#0a84ff',progress:missionProgressDebt('d3'),current:bal('d3'),target:goal('d3'),detail:`${money(bal('d3'))} remaining`},
+    {label:'Family Debt',type:'debt',color:'#bf5af2',progress:missionProgressDebt('d4'),current:bal('d4'),target:goal('d4'),detail:`${money(bal('d4'))} remaining`},
+    {label:'NFCU Visa',type:'debt',color:'#ffd60a',progress:missionProgressDebt('d0'),current:bal('d0'),target:goal('d0'),detail:`${money(bal('d0'))} remaining`},
+    {label:'Vehicle Loan',type:'debt',color:'#ff7b6e',progress:missionProgressDebt('d1'),current:bal('d1'),target:goal('d1'),detail:`${money(bal('d1'))} remaining`}
+  ];
+}
+function missionArcCircle(r,item){
+  const c=2*Math.PI*r, filled=c*(item.progress/100), empty=Math.max(0,c-filled);
+  return `<circle class="ring-bg" cx="130" cy="130" r="${r}" stroke-width="10"></circle>
+  <circle class="ring-fill" cx="130" cy="130" r="${r}" stroke="${item.color}" stroke-width="10" stroke-dasharray="${filled.toFixed(2)} ${empty.toFixed(2)}" stroke-dashoffset="0"></circle>`;
+}
+function renderMissionControlRings(){
+  const t=totals(), data=missionRingData();
+  const radii=[42,54,66,78,90,102];
+  const rings=data.map((item,i)=>missionArcCircle(radii[i],item)).join('');
+  const legend=data.map(item=>`<div class="mission-legend-row"><span class="mission-dot" style="background:${item.color}"></span><div><strong>${item.label}</strong><div class="fine pv">${item.detail}</div></div><span class="pill">${item.progress.toFixed(0)}%</span></div>`).join('');
+  return `<div class="mission-layout">
+    <div class="mission-wrap">
+      <div class="mission-rings">
+        <svg class="mission-svg" viewBox="0 0 260 260" aria-label="Mission Control plan progress rings">
+          <g transform="rotate(-90 130 130)">${rings}</g>
+        </svg>
+      </div>
+      <div class="mission-center">
+        <div class="mission-center-box">
+          <div>
+            <div class="label">Net Worth</div>
+            <strong class="${t.nw>=0?'green':'red'} pv">${money(t.nw)}</strong>
+            <div class="burn pv">${money(t.burn)}/mo interest</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mission-legend">${legend}</div>
+    <div class="mission-stats">
+      <div class="tile"><div class="label">Total Debt</div><div class="mini red pv">${money(t.debt)}</div></div>
+      <div class="tile"><div class="label">Assets</div><div class="mini green pv">${money(t.assets)}</div></div>
+      <div class="tile"><div class="label">Interest/mo</div><div class="mini red pv">${money(t.burn)}</div></div>
+      <div class="tile"><div class="label">Net Worth</div><div class="mini ${t.nw>=0?'green':'red'} pv">${money(t.nw)}</div></div>
+    </div>
+  </div>`;
+}
+function missionControlSection(){
+  return `<div class="card stack mission-card" style="grid-column:1/-1">
+    <div class="row wrap"><div><h2 style="margin:0">Mission Control</h2><p class="fine">Six live rings tying savings, debt exit, net worth, and interest burn into one home-base visual.</p></div><span class="pill blue">Live from sliders</span></div>
+    <div id="missionControlRings"></div>
+  </div>`;
+}
+function refreshMissionControl(){
+  const el=$('#missionControlRings');
+  if(el)el.innerHTML=renderMissionControlRings();
+}
+
 function renderHome(){
   const status=householdStatusLabel();
   $('#home').innerHTML=`<div class="grid two">
@@ -629,6 +718,7 @@ function renderHome(){
       <p class="muted"><strong class="${status[1]}">${status[0]}</strong> · ${status[2]}</p>
     </div>
 
+    ${missionControlSection()}
     ${moveCountdownCard()}
     ${combinedDebtSummaryCard()}
     ${interestBurnBreakdown()}
@@ -969,6 +1059,7 @@ function refreshHome(){
   const status=householdStatusLabel(), l=leftToSpend();
   $('#homeLeft').textContent=money(l);
   $('#homeLeft').className='hero pv '+status[1];
+  refreshMissionControl();
   $('#homePay').textContent=money(totalPay());
   $('#homeSaved').textContent=money(totalSaved());
   $('#homeSpent').textContent=money(totalSpent());
