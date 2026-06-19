@@ -204,7 +204,7 @@ details{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06)
 @media(max-width:560px){.pay-console-grid{grid-template-columns:1fr}}
 
 
-/* 10/10 flow polish */
+/* Stable 10/10 Home flow */
 .next-action-card{border:1px solid rgba(48,209,88,.28);background:linear-gradient(135deg,rgba(48,209,88,.10),rgba(10,132,255,.045));}
 .next-action-card.warn{border-color:rgba(255,214,10,.38);background:linear-gradient(135deg,rgba(255,214,10,.10),rgba(10,132,255,.035));}
 .next-action-card.danger{border-color:rgba(255,69,58,.45);background:linear-gradient(135deg,rgba(255,69,58,.11),rgba(10,132,255,.025));}
@@ -216,7 +216,6 @@ details{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06)
 .home-support>summary:after{content:'Open';font-size:.72rem;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:5px 8px;letter-spacing:0}
 .home-support[open]>summary:after{content:'Close'}
 .home-support-body{margin-top:10px}
-.home-primary-stack{grid-column:1/-1;display:grid;gap:12px}
 @media(max-width:720px){.next-action-card .grid.four{grid-template-columns:1fr 1fr}.next-action-big{font-size:1.55rem}}
 @media(max-width:500px){.next-action-card .grid.four{grid-template-columns:1fr}}
 
@@ -665,7 +664,8 @@ function scheduleRefreshAll(){
   refreshQueued=true;
   (window.requestAnimationFrame||function(fn){setTimeout(fn,16)})(function(){
     refreshQueued=false;
-    renderHome();refreshAll();
+    renderHome();
+    refreshAll();
   });
 }
 
@@ -795,123 +795,93 @@ function saveHomePaycheck(){
 
 function nextActionState(){
   const move=moveCountdownData();
-  const visa=bal('d0'), allDebt=totals().debt, phaseState=gsgLoad ? gsgLoad() : {};
-  const phase2Done = typeof gsgPhaseDone==='function' ? gsgPhaseDone(GSG_PHASES[1], phaseState) : false;
+  const visa=bal('d0'), allDebt=totals().debt;
   if(move.needed>0){
-    return {
-      cls:move.urgent?'danger':'warn',
-      label:'Next Action',
-      title:'Finish the Move Fund first',
-      amount:money(move.needed)+' needed',
-      note:`${move.days} days left · ${money(move.pace)} per paycheck pace`,
-      badge:move.urgent?'Urgent':'Phase 2'
-    };
+    return {cls:move.urgent?'danger':'warn',title:'Finish the Move Fund first',amount:money(move.needed)+' needed',note:move.days+' days left · '+money(move.pace)+' per paycheck pace',badge:move.urgent?'Urgent':'Phase 2'};
   }
   if(visa>0){
-    return {
-      cls:'warn',
-      label:'Next Action',
-      title:'Run the Visa attack',
-      amount:money(visa)+' remaining',
-      note:'Keep zero new charges and hold the $700/month plan.',
-      badge:'Phase 3'
-    };
+    return {cls:'warn',title:'Run the Visa attack',amount:money(visa)+' remaining',note:'Keep zero new charges and hold the $700/month plan.',badge:'Phase 3'};
   }
   if(allDebt>0){
-    return {
-      cls:'warn',
-      label:'Next Action',
-      title:'Roll freed cash into the next debt',
-      amount:money(allDebt)+' household debt',
-      note:'Do not let the freed Visa payment become lifestyle inflation.',
-      badge:'Rollover'
-    };
+    return {cls:'warn',title:'Roll freed cash into the next debt',amount:money(allDebt)+' household debt',note:'Do not let the freed Visa payment become lifestyle inflation.',badge:'Rollover'};
   }
-  return {
-    cls:'',
-    label:'Next Action',
-    title:'Shift into wealth-building',
-    amount:'Debt cleared',
-    note:'Route freed payments into HYSA, Roth IRA, 401(k), and investing.',
-    badge:'Phase 5'
-  };
+  return {cls:'',title:'Shift into wealth-building',amount:'Debt cleared',note:'Route freed payments into HYSA, Roth IRA, 401(k), and investing.',badge:'Phase 5'};
 }
 function nextActionCard(){
-  const n=nextActionState();
-  return `<div class="card stack next-action-card ${n.cls}" style="grid-column:1/-1">
-    <div class="row wrap"><div><p class="kicker">${n.label}</p><h2 class="next-action-title">${n.title}</h2></div><span class="pill ${n.cls==='danger'?'red':n.cls==='warn'?'amber':'green'}">${n.badge}</span></div>
-    <div class="next-action-big pv">${n.amount}</div>
-    <p class="fine">${n.note}</p>
-    <div class="grid four">
-      <div class="tile"><div class="label">Move Fund Needed</div><div class="mini ${moveCountdownData().needed>0?'amber':'green'} pv">${money(moveCountdownData().needed)}</div></div>
-      <div class="tile"><div class="label">Visa Balance</div><div class="mini red pv">${money(bal('d0'))}</div></div>
-      <div class="tile"><div class="label">Interest/mo</div><div class="mini red pv">${money(totals().burn)}</div></div>
-      <div class="tile"><div class="label">Net Worth</div><div class="mini ${totals().nw>=0?'green':'red'} pv">${money(totals().nw)}</div></div>
-    </div>
-  </div>`;
-}
-function homeSupport(title,inner,open=false){
-  return `<details class="home-support" ${open?'open':''}><summary>${title}</summary><div class="home-support-body">${inner}</div></details>`;
+  const n=nextActionState(), t=totals(), m=moveCountdownData();
+  return '<div class="card stack next-action-card '+n.cls+'" style="grid-column:1/-1">'+
+    '<div class="row wrap"><div><p class="kicker">Next Action</p><h2 class="next-action-title">'+n.title+'</h2></div><span class="pill '+(n.cls==='danger'?'red':n.cls==='warn'?'amber':'green')+'">'+n.badge+'</span></div>'+
+    '<div class="next-action-big pv">'+n.amount+'</div>'+
+    '<p class="fine">'+n.note+'</p>'+
+    '<div class="grid four">'+
+      '<div class="tile"><div class="label">Move Fund Needed</div><div class="mini '+(m.needed>0?'amber':'green')+' pv">'+money(m.needed)+'</div></div>'+
+      '<div class="tile"><div class="label">Visa Balance</div><div class="mini red pv">'+money(bal('d0'))+'</div></div>'+
+      '<div class="tile"><div class="label">Interest/mo</div><div class="mini red pv">'+money(t.burn)+'</div></div>'+
+      '<div class="tile"><div class="label">Net Worth</div><div class="mini '+(t.nw>=0?'green':'red')+' pv">'+money(t.nw)+'</div></div>'+
+    '</div>'+
+  '</div>';
 }
 
 function renderHome(){
-  const status=householdStatusLabel();
-  $('#home').innerHTML=`<div class="grid two">
-    ${nextActionCard()}
+  const sharedMoneyFlow = '<div class="card stack" style="grid-column:1/-1">'+
+    '<h2>Shared Money Flow</h2>'+
+    '<div class="grid flow-grid">'+
+      '<div class="tile"><div class="label">Combined Paychecks</div><div id="homePay" class="stat green pv">—</div></div>'+
+      '<div class="tile"><div class="label">Combined Savings</div><div id="homeSaved" class="stat blue pv">—</div></div>'+
+      '<div class="tile"><div class="label">Combined Spending</div><div id="homeSpent" class="stat red pv">—</div></div>'+
+    '</div>'+
+    '<p id="periodLine" class="fine"></p>'+
+  '</div>';
 
-    ${missionControlSection()}
+  const combinedPaycheckPlan = '<div class="card stack" style="grid-column:1/-1">'+
+    '<h2>Combined Paycheck Plan</h2>'+
+    '<p class="fine">Shared view of where both paychecks are assigned before spending happens.</p>'+
+    '<div id="combinedPlan" class="grid two"></div>'+
+  '</div>';
 
-    ${homePaycheckConsole()}
+  const sharedBillsCoverage = '<div class="card stack" style="grid-column:1/-1">'+
+    '<h2>Shared Bills Coverage</h2>'+
+    '<div id="sharedBillsCoverage"></div>'+
+  '</div>';
 
-    ${homeSupport('Move Fund Countdown', moveCountdownCard())}
+  const transparencySnapshotCard = '<div class="card stack" style="grid-column:1/-1">'+
+    '<h2>Transparency Snapshot</h2>'+
+    '<p class="fine">Shared view of income, debt, assets, net worth, and household pressure.</p>'+
+    '<div id="transparencySnapshot"></div>'+
+  '</div>';
 
-    ${homeSupport('Interest Burn', interestBurnBreakdown())}
+  const sharedGoalsCard = '<div class="card stack">'+
+    '<h2>Shared Goals</h2>'+
+    '<div id="sharedGoalsHome" class="stack"></div>'+
+  '</div>';
 
-    ${homeSupport('Combined Debt Summary', combinedDebtSummaryCard())}
+  const debtPriorityCard = '<div class="card stack">'+
+    '<h2>Debt Priority</h2>'+
+    '<div id="debtPriorityHome"></div>'+
+  '</div>';
 
-    ${homeSupport('Shared Money Flow', `<div class="card stack" style="grid-column:1/-1">
-      <h2>Shared Money Flow</h2>
-      <div class="grid flow-grid">
-        <div class="tile"><div class="label">Combined Paychecks</div><div id="homePay" class="stat green pv">—</div></div>
-        <div class="tile"><div class="label">Combined Savings</div><div id="homeSaved" class="stat blue pv">—</div></div>
-        <div class="tile"><div class="label">Combined Spending</div><div id="homeSpent" class="stat red pv">—</div></div>
-      </div>
-      <p id="periodLine" class="fine"></p>
-    </div>`)}
+  const capsCard = '<div class="card stack" style="grid-column:1/-1">'+
+    '<h2>Household Spending Caps</h2>'+
+    '<div id="capBars" class="stack"></div>'+
+    '<details class="fine"><summary>Budget adjustment when one category goes over</summary><div id="budgetAdjustment" class="stack"></div></details>'+
+  '</div>';
 
-    ${homeSupport('Combined Paycheck Plan', `<div class="card stack" style="grid-column:1/-1">
-      <h2>Combined Paycheck Plan</h2>
-      <p class="fine">Shared view of where both paychecks are assigned before spending happens.</p>
-      <div id="combinedPlan" class="grid two"></div>
-    </div>`)}
-
-    ${homeSupport('Shared Bills Coverage', `<div class="card stack" style="grid-column:1/-1">
-      <h2>Shared Bills Coverage</h2>
-      <div id="sharedBillsCoverage"></div>
-    </div>`)}
-
-    ${homeSupport('Transparency Snapshot', `<div class="card stack" style="grid-column:1/-1">
-      <h2>Transparency Snapshot</h2>
-      <p class="fine">Shared view of income, debt, assets, net worth, and household pressure.</p>
-      <div id="transparencySnapshot"></div>
-    </div>`)}
-
-    ${homeSupport('Shared Goals', `<div class="card stack">
-      <h2>Shared Goals</h2>
-      <div id="sharedGoalsHome" class="stack"></div>
-    </div>`)}
-
-    ${homeSupport('Debt Priority', `<div class="card stack">
-      <h2>Debt Priority</h2>
-      <div id="debtPriorityHome"></div>
-    </div>`)}
-
-    ${homeSupport('Household Spending Caps', `<div class="card stack" style="grid-column:1/-1">
-      <h2>Household Spending Caps</h2>
-      <div id="capBars" class="stack"></div>
-      <details class="fine"><summary>Budget adjustment when one category goes over</summary><div id="budgetAdjustment" class="stack"></div></details>
-    </div>`)}
-  </div>`;
+  $('#home').innerHTML =
+    '<div class="grid two">'+
+      nextActionCard()+
+      missionControlSection()+
+      homePaycheckConsole()+
+      '<details class="home-support"><summary>Move Fund Countdown</summary><div class="home-support-body">'+moveCountdownCard()+'</div></details>'+
+      '<details class="home-support"><summary>Interest Burn</summary><div class="home-support-body">'+interestBurnBreakdown()+'</div></details>'+
+      '<details class="home-support"><summary>Combined Debt Summary</summary><div class="home-support-body">'+combinedDebtSummaryCard()+'</div></details>'+
+      '<details class="home-support"><summary>Shared Money Flow</summary><div class="home-support-body">'+sharedMoneyFlow+'</div></details>'+
+      '<details class="home-support"><summary>Combined Paycheck Plan</summary><div class="home-support-body">'+combinedPaycheckPlan+'</div></details>'+
+      '<details class="home-support"><summary>Shared Bills Coverage</summary><div class="home-support-body">'+sharedBillsCoverage+'</div></details>'+
+      '<details class="home-support"><summary>Transparency Snapshot</summary><div class="home-support-body">'+transparencySnapshotCard+'</div></details>'+
+      '<details class="home-support"><summary>Shared Goals</summary><div class="home-support-body">'+sharedGoalsCard+'</div></details>'+
+      '<details class="home-support"><summary>Debt Priority</summary><div class="home-support-body">'+debtPriorityCard+'</div></details>'+
+      '<details class="home-support"><summary>Household Spending Caps</summary><div class="home-support-body">'+capsCard+'</div></details>'+
+    '</div>';
 }
 function danielBaselineCard(){
   const b=DANIEL_STATEMENT_BASELINE;
@@ -1200,13 +1170,14 @@ function renderSettings(){
 }
 function refreshHome(){
   const status=householdStatusLabel(), l=leftToSpend();
-  $('#homeLeft').textContent=money(l);
-  $('#homeLeft').className='hero pv '+status[1];
+  const homeLeft=$('#homeLeft');
+  if(homeLeft){homeLeft.textContent=money(l);homeLeft.className='hero pv '+status[1];}
   refreshMissionControl();
-  if($('#homePay'))$('#homePay').textContent=money(totalPay());
-  if($('#homeSaved'))$('#homeSaved').textContent=money(totalSaved());
-  if($('#homeSpent'))$('#homeSpent').textContent=money(totalSpent());
-  if($('#periodLine'))$('#periodLine').textContent=`Daniel: ${activePeriod('daniel')} · Sonia: ${activePeriod('sonia')}`;
+
+  const hp=$('#homePay'); if(hp)hp.textContent=money(totalPay());
+  const hs=$('#homeSaved'); if(hs)hs.textContent=money(totalSaved());
+  const hsp=$('#homeSpent'); if(hsp)hsp.textContent=money(totalSpent());
+  const pl=$('#periodLine'); if(pl)pl.textContent=`Daniel: ${activePeriod('daniel')} · Sonia: ${activePeriod('sonia')}`;
 
   const combinedPlan=$('#combinedPlan');
   if(combinedPlan)combinedPlan.innerHTML=sharedPlanSummary();
@@ -1221,9 +1192,11 @@ function refreshHome(){
   if(debtHome)debtHome.innerHTML=debtPriorityBlock();
 
   const goals=sharedGoals(), gTotal=sharedGoalTotal(), gTarget=sharedGoalTargetTotal(), gPct=clamp(gTotal/Math.max(1,gTarget)*100,0,100);
-  if($('#sharedGoalsHome'))$('#sharedGoalsHome').innerHTML=`<div class="bar"><div class="fill green" style="width:${gPct}%"></div></div><div class="row fine pv"><span>${money(gTotal)} saved</span><span>${money(gTarget)} target</span></div>`+goals.slice(0,5).map(g=>`<div class="row fine pv"><span>${g.name}</span><strong>${money(g.current)} / ${money(g.target)}</strong></div>`).join('');
+  const goalHome=$('#sharedGoalsHome');
+  if(goalHome)goalHome.innerHTML=`<div class="bar"><div class="fill green" style="width:${gPct}%"></div></div><div class="row fine pv"><span>${money(gTotal)} saved</span><span>${money(gTarget)} target</span></div>`+goals.slice(0,5).map(g=>`<div class="row fine pv"><span>${g.name}</span><strong>${money(g.current)} / ${money(g.target)}</strong></div>`).join('');
 
-  if($('#capBars'))$('#capBars').innerHTML=cats().map(c=>{
+  const capBars=$('#capBars');
+  if(capBars)capBars.innerHTML=cats().map(c=>{
     const d=spent('daniel',c.id), s=spent('sonia',c.id), total=d+s, cap=c.budget, left=cap-total, used=cap>0?(total/cap*100):0, status=used>=100?'red':used>=75?'amber':'green';
     return`<div class="cap-row">
       <div><strong>${c.label}</strong><small class="pv">Daniel ${money(d)} · Sonia ${money(s)} · cap ${money(cap)}</small></div>
