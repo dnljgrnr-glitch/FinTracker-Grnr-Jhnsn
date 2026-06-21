@@ -234,6 +234,15 @@ details{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06)
 .playbook-switch{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}
 @media(max-width:620px){.playbook-switch{grid-template-columns:1fr}}
 
+
+/* Accuracy/period/cap controls */
+.quality-pill{display:inline-flex;align-items:center;border-radius:999px;padding:5px 9px;font-size:.72rem;font-weight:900}
+.quality-pill.partial{background:rgba(255,214,10,.14);color:#ffe370}
+.quality-pill.verified{background:rgba(48,209,88,.14);color:#78e693}
+.period-context-card{border:1px solid rgba(255,214,10,.22);background:rgba(255,214,10,.045)}
+.cap-overage-card{border:1px solid rgba(255,69,58,.24);background:rgba(255,69,58,.055)}
+.wallet-confirm-card{border:1px solid rgba(255,214,10,.22);background:rgba(255,214,10,.045)}
+
 </style>
 </head>
 <body>
@@ -682,7 +691,8 @@ function interestBurnBreakdown(){
 function combinedDebtSummaryCard(){
   const t=liveTotals();
   return `<div id="combinedDebtSummaryCard" class="card stack summary-card" style="grid-column:1/-1">
-    <h2>Combined Debt Summary</h2>
+    <div class="row wrap"><h2 style="margin:0">Combined Debt Summary</h2>${netWorthQualityBadge()}</div>
+    <p class="fine">${netWorthQuality().note}</p>
     <div class="grid four">
       <div class="tile"><div class="label">Total household debt</div><div class="mini red pv">${money(t.debt)}</div></div>
       <div class="tile"><div class="label">Savings / assets</div><div class="mini green pv">${money(t.assets)}</div></div>
@@ -912,7 +922,8 @@ function updatePaycheckLog(p,i){
 function deletePaycheckLog(p,i){
   const logs=log(p);
   if(!logs[i]){toast('Paycheck not found');return}
-  if(!confirm('Delete this paycheck entry?'))return;
+  if(!logs[i].resetSnapshot && !confirm('This paycheck was created before reset snapshots existed. Deleting it may not restore the prior spending/savings state. Continue?'))return;
+  if(logs[i].resetSnapshot && !confirm('Delete this paycheck entry?'))return;
   const wasLatest=i===logs.length-1;
   const removed=logs.splice(i,1)[0];
   S('pay:'+p,logs,true);
@@ -948,6 +959,68 @@ function refreshHomeLiveCards(){
   refreshMissionControl();
 }
 
+
+function isWalletConfirmed(p){return !!J('walletConfirmed:'+p,false)}
+function netWorthQuality(){
+  return isWalletConfirmed('sonia')?{label:'Verified',cls:'verified',note:'Net worth includes confirmed wallet balances.'}:{label:'Partial',cls:'partial',note:'Net worth is partial until Sonia wallet checking/savings are confirmed.'};
+}
+function netWorthQualityBadge(){
+  const q=netWorthQuality();
+  return `<span class="quality-pill ${q.cls}">Net Worth Data Quality: ${q.label}</span>`;
+}
+function statementPeriodLabel(p){
+  if(p==='daniel')return J('statementPeriod:daniel','05/21–06/20 statement spending');
+  return J('statementPeriod:sonia','Sonia spending period not confirmed');
+}
+function paycheckPeriodLabel(p){
+  return activePeriod(p)==='No active period'?'No active paycheck period':activePeriod(p)+' paycheck period';
+}
+function periodContextCard(){
+  return `<div class="card stack period-context-card" style="grid-column:1/-1">
+    <div class="row wrap"><div><h2 style="margin:0">Period Context</h2><p class="fine">Keeps statement spending separate from the active paycheck period so the deficit is interpreted correctly.</p></div>${netWorthQualityBadge()}</div>
+    <div class="grid two">
+      <div class="tile"><div class="label">Daniel statement spending</div><div class="mini amber">${statementPeriodLabel('daniel')}</div><p class="fine">Logged spending can exceed the current paycheck because it represents the statement period.</p></div>
+      <div class="tile"><div class="label">Daniel active paycheck</div><div class="mini blue">${paycheckPeriodLabel('daniel')}</div><p class="fine pv">Paycheck ${money(latestPay('daniel'))} · savings ${money(savedPeriod('daniel'))} · spending ${money(spentPeriod('daniel'))}</p></div>
+    </div>
+  </div>`;
+}
+function capOverageSummary(p='daniel'){
+  const list=cats();
+  const totalCap=list.reduce((s,c)=>s+Number(c.budget||0),0);
+  const actual=list.reduce((s,c)=>s+spent(p,c.id),0);
+  const over=actual-totalCap;
+  return `<div class="card stack cap-overage-card" style="grid-column:1/-1">
+    <div class="row wrap"><div><h2 style="margin:0">${P[p].name} Cap Overage Summary</h2><p class="fine">Current caps compared against the logged period spending.</p></div><span class="pill ${over>0?'red':'green'}">${over>0?'Over cap':'Inside caps'}</span></div>
+    <div class="grid three">
+      <div class="tile"><div class="label">Total cap target</div><div class="mini blue pv">${money(totalCap)}</div></div>
+      <div class="tile"><div class="label">Actual spending</div><div class="mini ${actual>totalCap?'red':'green'} pv">${money(actual)}</div></div>
+      <div class="tile"><div class="label">${over>=0?'Overage':'Remaining'}</div><div class="mini ${over>0?'red':'green'} pv">${money(Math.abs(over))}</div></div>
+    </div>
+  </div>`;
+}
+function liveSavingsGoalsCard(){
+  const goals=sharedGoals(), gTotal=sharedGoalTotal(), gTarget=sharedGoalTargetTotal(), gPct=clamp(gTotal/Math.max(1,gTarget)*100,0,100);
+  return `<div class="card stack">
+    <h2>Live Savings Goals</h2>
+    <p class="fine">This view reads from live savings trackers only. It no longer uses the stale sharedGoals storage key.</p>
+    <div class="bar"><div class="fill green" style="width:${gPct}%"></div></div>
+    <div class="row fine pv"><span>${money(gTotal)} saved</span><span>${money(gTarget)} target</span></div>
+    ${goals.map(g=>`<div class="row fine pv"><span>${g.name}</span><strong>${money(g.current)} / ${money(g.target)}</strong></div>`).join('')}
+  </div>`;
+}
+function walletConfirmationCard(p){
+  const confirmed=isWalletConfirmed(p);
+  return `<div class="card stack wallet-confirm-card" style="grid-column:1/-1">
+    <div class="row wrap"><div><h2 style="margin:0">${P[p].name} Wallet Confirmation</h2><p class="fine">Net worth quality remains partial until wallet checking/savings balances are confirmed.</p></div><span class="quality-pill ${confirmed?'verified':'partial'}">${confirmed?'Wallet Confirmed':'Wallet Needs Confirmation'}</span></div>
+    <div class="grid three">
+      <div class="tile"><div class="label">Checking</div><div class="mini ${P[p].cls} pv">${money(Number(J('w:'+p+':c',DEFAULT_WALLET[p]?.c||0)))}</div></div>
+      <div class="tile"><div class="label">Savings</div><div class="mini ${P[p].cls} pv">${money(Number(J('w:'+p+':s',DEFAULT_WALLET[p]?.s||0)))}</div></div>
+      <div class="tile"><div class="label">Wallet total</div><div class="mini ${P[p].cls} pv">${money(Number(J('w:'+p+':c',DEFAULT_WALLET[p]?.c||0))+Number(J('w:'+p+':s',DEFAULT_WALLET[p]?.s||0)))}</div></div>
+    </div>
+    <button class="btn ${confirmed?'green':'primary'}" data-confirm-wallet="${p}">${confirmed?'Wallet Confirmed':'Mark Wallet Confirmed'}</button>
+  </div>`;
+}
+
 function renderHome(){
   const sharedMoneyFlow = '<div class="card stack" style="grid-column:1/-1">'+
     '<h2>Shared Money Flow</h2>'+
@@ -977,8 +1050,8 @@ function renderHome(){
   '</div>';
 
   const sharedGoalsCard = '<div class="card stack">'+
-    '<h2>Shared Goals</h2>'+
-    '<div id="sharedGoalsHome" class="stack"></div>'+
+    '<h2>Live Savings Goals</h2>'+
+    '<div id="liveSavingsGoalsHome" class="stack"></div>'+
   '</div>';
 
   const debtPriorityCard = '<div class="card stack">'+
@@ -997,6 +1070,8 @@ function renderHome(){
       nextActionCard()+
       missionControlSection()+
       homePaycheckConsole()+
+      periodContextCard()+
+      capOverageSummary('daniel')+
       '<details class="home-support"><summary>Move Fund Countdown</summary><div class="home-support-body">'+moveCountdownCard()+'</div></details>'+
       '<details class="home-support"><summary>Interest Burn</summary><div class="home-support-body">'+interestBurnBreakdown()+'</div></details>'+
       '<details class="home-support"><summary>Combined Debt Summary</summary><div class="home-support-body">'+combinedDebtSummaryCard()+'</div></details>'+
@@ -1004,7 +1079,7 @@ function renderHome(){
       '<details class="home-support"><summary>Combined Paycheck Plan</summary><div class="home-support-body">'+combinedPaycheckPlan+'</div></details>'+
       '<details class="home-support"><summary>Shared Bills Coverage</summary><div class="home-support-body">'+sharedBillsCoverage+'</div></details>'+
       '<details class="home-support"><summary>Transparency Snapshot</summary><div class="home-support-body">'+transparencySnapshotCard+'</div></details>'+
-      '<details class="home-support"><summary>Shared Goals</summary><div class="home-support-body">'+sharedGoalsCard+'</div></details>'+
+      '<details class="home-support"><summary>Live Savings Goals</summary><div class="home-support-body">'+sharedGoalsCard+'</div></details>'+
       '<details class="home-support"><summary>Debt Priority</summary><div class="home-support-body">'+debtPriorityCard+'</div></details>'+
       '<details class="home-support"><summary>Household Spending Caps</summary><div class="home-support-body">'+capsCard+'</div></details>'+
     '</div>';
@@ -1280,6 +1355,7 @@ function renderPerson(p){
       <button class="jump-chip" data-jump="${p}-debt">Debt</button>
       <button class="jump-chip" data-jump="${p}-log">Log</button>
     </div></div>
+    ${p==='sonia'?walletConfirmationCard(p):''}
     <details class="section-toggle" id="${p}-wallet"><summary>Wallet</summary><div class="card stack" style="grid-column:1/-1"><h2>Wallet</h2><div class="grid two"><div class="field"><label>Checking</label><input data-wallet="${p}:c" type="number" step="0.01" value="${J('w:'+p+':c',DEFAULT_WALLET[p]?.c||0)}"></div><div class="field"><label>Savings</label><input data-wallet="${p}:s" type="number" step="0.01" value="${J('w:'+p+':s',DEFAULT_WALLET[p]?.s||0)}"></div></div><div class="row"><span>Wallet total</span><strong id="${p}Wallet" class="${P[p].cls} pv">—</strong></div></div></details>
     <div class="card stack" id="${p}-start" data-pay-box="${p}"><h2>Start Here</h2><p class="fine">Log the paycheck. The Paycheck Plan updates immediately.</p><div class="grid"><div class="field"><label>Paycheck amount</label><input data-pay-amount="${p}" type="number" step="0.01" placeholder="0.00"></div><div class="field"><label>Date</label><input data-pay-date="${p}" type="date" value="${new Date().toISOString().slice(0,10)}"></div><div class="field"><label>Source</label><input data-pay-source="${p}" placeholder="${p==='daniel'?'RAC / VA':'Payroll'}"></div></div><button class="btn primary" data-save-pay="${p}">Save Paycheck + Reset ${P[p].name}</button></div>
     <div class="card stack" id="${p}-plan"><h2>Paycheck Plan</h2><p class="fine">Where the latest paycheck should go. Enter or log a paycheck and the allocation visual updates live.</p><div id="${p}AllocChart"></div><div id="${p}Alloc"></div></div>
@@ -1387,8 +1463,8 @@ function refreshHome(){
   if(debtHome)debtHome.innerHTML=debtPriorityBlock();
 
   const goals=sharedGoals(), gTotal=sharedGoalTotal(), gTarget=sharedGoalTargetTotal(), gPct=clamp(gTotal/Math.max(1,gTarget)*100,0,100);
-  const goalHome=$('#sharedGoalsHome');
-  if(goalHome)goalHome.innerHTML=`<div class="bar"><div class="fill green" style="width:${gPct}%"></div></div><div class="row fine pv"><span>${money(gTotal)} saved</span><span>${money(gTarget)} target</span></div>`+goals.slice(0,5).map(g=>`<div class="row fine pv"><span>${g.name}</span><strong>${money(g.current)} / ${money(g.target)}</strong></div>`).join('');
+  const goalHome=$('#liveSavingsGoalsHome')||$('#sharedGoalsHome');
+  if(goalHome){const tmp=document.createElement('div');tmp.innerHTML=liveSavingsGoalsCard();goalHome.innerHTML=tmp.firstElementChild?tmp.firstElementChild.innerHTML:liveSavingsGoalsCard();}
 
   const capBars=$('#capBars');
   if(capBars)capBars.innerHTML=cats().map(c=>{
@@ -1485,7 +1561,7 @@ function bind(){
     if(t.matches('[data-debt-name]')){S('debt:name:'+t.dataset.debtName,t.value,true);refreshAll()}
     if(t.matches('[data-debt-balance]')){S('b:'+t.dataset.debtBalance,Number(t.value||0),true);refreshAll()}
   });
-  document.addEventListener('change',e=>{const t=e.target;if(t.matches('[data-playcheck]')){S('playcheck:'+t.dataset.playcheck,t.checked,true)}if(t.id==='importFile'&&t.files[0]){const r=new FileReader();r.onload=()=>{try{const data=JSON.parse(r.result);Object.entries(data).forEach(([k,v])=>localStorage.setItem(k,JSON.stringify(v)));location.reload()}catch{toast('Import failed')}};r.readAsText(t.files[0])}});
+  document.addEventListener('change',e=>{const t=e.target;if(t.matches('[data-playcheck]')){S('playcheck:'+t.dataset.playcheck,t.checked,true)}if(t.matches('[data-confirm-wallet]')){S('walletConfirmed:'+t.dataset.confirmWallet,true,true);refreshAll();toast(P[t.dataset.confirmWallet].name+' wallet confirmed')}if(t.id==='importFile'&&t.files[0]){const r=new FileReader();r.onload=()=>{try{const data=JSON.parse(r.result);Object.entries(data).forEach(([k,v])=>localStorage.setItem(k,JSON.stringify(v)));location.reload()}catch{toast('Import failed')}};r.readAsText(t.files[0])}});
 }
 
 var GSG_KEY = 'ck:getstarted';
@@ -1650,7 +1726,6 @@ function migrateDeadSharedGoals(){
 }
 
 function init(){
-  migrateDeadSharedGoals();
   if(J('pm',false)){document.body.classList.add('pm');$('#privacyBtn').textContent='Show $'}
   const mam=$('#mobileActionMount'); if(mam)mam.innerHTML=mobileActionBar();renderGuide();renderHome();renderPerson('daniel');renderPerson('sonia');renderHousehold();renderPlanTab();restorePlaybookChecks();renderSettings();bind();refreshAll();
   const profile=sessionStorage.getItem('activeProfile')||J('lastProfile','daniel');$('#profileSelect').value=profile;
