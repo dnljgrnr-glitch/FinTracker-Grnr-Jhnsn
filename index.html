@@ -246,6 +246,12 @@ details{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06)
   .mission-legend-row{grid-template-columns:12px 1fr auto}
 }
 
+
+/* Mobile passcode and lock-screen hard-hide */
+.passcode-input{-webkit-text-security:disc;text-security:disc}
+.login.force-hidden{display:none!important;visibility:hidden!important;pointer-events:none!important;opacity:0!important}
+body.unlocked .login{display:none!important;visibility:hidden!important;pointer-events:none!important;opacity:0!important}
+
 </style>
 </head>
 <body>
@@ -257,7 +263,7 @@ details{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06)
         <option value="daniel">Daniel</option>
         <option value="sonia">Sonia</option>
       </select>
-      <input id="passwordInput" type="password" placeholder="Passcode" autocomplete="current-password" aria-label="Passcode">
+      <input id="passwordInput" class="passcode-input" type="text" placeholder="Passcode" autocomplete="one-time-code" autocapitalize="characters" autocorrect="off" spellcheck="false" aria-label="Passcode">
       <button class="btn primary" type="submit">Unlock</button>
       <p id="loginError" class="err"></p>
     </form>
@@ -1435,13 +1441,50 @@ function savePay(p,sourceEl=null){
 function addSpending(p,id){const input=$(`#${p}-${id}-add`), amount=Number(input?.value||0); if(amount<=0){toast('Enter spending amount');return} S('cs:'+p+':'+id,spent(p,id)+amount,true); if(input)input.value=''; refreshAll(); toast('Spending recorded')}
 function addSavings(p){const amount=Number($(`#${p}SavingsAdd`)?.value||0), id=$(`#${p}SavingsSelect`)?.value; if(amount<=0||!id){toast('Enter savings amount');return} S('sv:'+p,savedPeriod(p)+amount,true); S('b:'+id,bal(id)+amount,true); $(`#${p}SavingsAdd`).value=''; refreshAll(); toast('Savings recorded')}
 function recordDebt(id){const amount=Number($(`#pay-${id}`)?.value||0); if(amount<=0){toast('Enter payment amount');return} S('b:'+id,Math.max(0,bal(id)-amount),true); $(`#pay-${id}`).value=''; refreshAll(); toast('Debt payment recorded')}
+
+function unlockApp(profile){
+  sessionStorage.setItem('financeUnlocked','true');
+  sessionStorage.setItem('activeProfile',profile);
+  S('lastProfile',profile,true);
+  const input=$('#passwordInput');
+  if(input){input.blur();input.value='';}
+  const login=$('#login');
+  if(login){
+    login.classList.add('hidden');
+    login.classList.add('force-hidden');
+    login.setAttribute('aria-hidden','true');
+    login.style.display='none';
+    login.style.visibility='hidden';
+    login.style.pointerEvents='none';
+    login.style.opacity='0';
+  }
+  document.body.classList.add('unlocked');
+  showTab('getstarted');
+  setTimeout(()=>{const l=$('#login');if(l)l.style.display='none';},50);
+}
+function lockApp(){
+  sessionStorage.clear();
+  const login=$('#login');
+  if(login){
+    login.classList.remove('hidden');
+    login.classList.remove('force-hidden');
+    login.removeAttribute('aria-hidden');
+    login.style.display='';
+    login.style.visibility='';
+    login.style.pointerEvents='';
+    login.style.opacity='';
+  }
+  document.body.classList.remove('unlocked');
+  location.reload();
+}
+
 function showTab(id){$$('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));$$('.panel').forEach(p=>p.classList.toggle('active',p.id===id));const labels={getstarted:'Get Started guide',home:'Household command center',household:'Shared bills and debt sequence',settings:'App settings',daniel:'Daniel detail page',sonia:'Sonia detail page'};$('#activeUserLine').textContent=labels[id]||'Financial OS';if(id==='getstarted'&&!$('#gsgPhases'))renderGuide()}
 function collect(){const out={},pref=['b:','g:','w:','cs:','cb:','sv:','pay:','period:','inc:','bill','bills:','alloc:','split:','apr:','cat:','save:','debt:'];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(pref.some(p=>k.startsWith(p))||['pm','lastUpdated','lastProfile','sharedGoals','ck:getstarted'].includes(k))out[k]=J(k,null)}return out}
 function download(name,text,type){const blob=new Blob([text],{type}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();URL.revokeObjectURL(a.href);a.remove()}
 
 function bind(){
-  $('#loginForm').addEventListener('submit',e=>{e.preventDefault();const input=$('#passwordInput');if(input.value.trim().toUpperCase() === PASS){const profile=$('#profileSelect').value;sessionStorage.setItem('financeUnlocked','true');sessionStorage.setItem('activeProfile',profile);S('lastProfile',profile,true);$('#login').classList.add('hidden');showTab('getstarted');toast('Unlocked')}else{$('#loginError').textContent='Incorrect passcode.';input.select()}});
-  $('#lockBtn').onclick=()=>{sessionStorage.clear();location.reload()}; $('#printBtn').onclick=()=>window.print(); $('#privacyBtn').onclick=()=>{const on=!document.body.classList.contains('pm');document.body.classList.toggle('pm',on);S('pm',on,true);$('#privacyBtn').textContent=on?'Show $':'Hide $'};
+  $('#loginForm').addEventListener('submit',e=>{e.preventDefault();const input=$('#passwordInput');if(input.value.trim().toUpperCase() === PASS){const profile=$('#profileSelect').value;unlockApp(profile);toast('Unlocked')}else{$('#loginError').textContent='Incorrect passcode.';input.select()}});
+  $('#lockBtn').onclick=()=>lockApp(); $('#printBtn').onclick=()=>window.print(); $('#privacyBtn').onclick=()=>{const on=!document.body.classList.contains('pm');document.body.classList.toggle('pm',on);S('pm',on,true);$('#privacyBtn').textContent=on?'Show $':'Hide $'};
   document.addEventListener('click',e=>{
     const jump=e.target.closest('[data-jump]'); if(jump){document.getElementById(jump.dataset.jump)?.scrollIntoView({behavior:'smooth',block:'start'});}
     const mj=e.target.closest('[data-mobile-jump]'); if(mj){const active=document.querySelector('.panel.active')?.id; if(active==='daniel'||active==='sonia'){document.getElementById(active+'-'+mj.dataset.mobileJump)?.scrollIntoView({behavior:'smooth',block:'start'});}else{showTab('daniel');setTimeout(()=>document.getElementById('daniel-'+mj.dataset.mobileJump)?.scrollIntoView({behavior:'smooth',block:'start'}),50);}}
