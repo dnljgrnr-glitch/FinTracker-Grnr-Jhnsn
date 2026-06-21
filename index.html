@@ -284,15 +284,26 @@ const PASS = 'JASPER';
 const P={daniel:{name:'Daniel',cls:'blue',color:'var(--blue)'},sonia:{name:'Sonia',cls:'green',color:'var(--green)'}};
 const DEFAULTS={
   daniel:{income:3200,alloc:{'Shared bills set-aside':25,'NFCU Visa':22,'Vehicle loan':13,'Move/Emergency savings':9,'Transportation':5,'Food/Personal':5},
-    debts:[{id:'d0',label:'NFCU Visa',balance:9315.95,apr:16.49,min:452.82},{id:'d1',label:'Vehicle Loan',balance:22010.21,apr:9.14,min:426.20},{id:'d2',label:'Apple Card',balance:930.39,apr:20,min:50}],
-    savings:[{id:'s0',label:'Move Fund',current:0,target:1950},{id:'s1',label:'Emergency Fund',current:0,target:5000},{id:'s4',label:'NFCU EasyStart Certificate',current:2240.98,target:2240.98,rate:3.870,weeklyDeposit:50,lastDeposit:'2026-06-16'}]},
+    debts:[{id:'d0',label:'NFCU Visa',balance:9089.22,apr:16.49,min:452.82},{id:'d1',label:'Vehicle Loan',balance:21584.01,apr:9.14,min:426.20},{id:'d2',label:'Apple Card',balance:930.39,apr:20,min:50}],
+    savings:[{id:'s0',label:'Move Fund',current:500,target:2500},{id:'s1',label:'Emergency Fund',current:0,target:5000},{id:'s4',label:'NFCU EasyStart Certificate',current:2240.98,target:2240.98,rate:3.870,weeklyDeposit:50,lastDeposit:'2026-06-16'}]},
   sonia:{income:2200,alloc:{'Shared bills set-aside':24,'NW Bank Loan':6,'Family Debt':9,'Emergency savings':5,'Transportation':6,'Food/Personal':6,'Personal spending':5},
     debts:[{id:'d3',label:'NW Bank Loan',balance:2266.02,apr:12.5,min:135.83},{id:'d4',label:'Family Debt',balance:10000,apr:0,min:200},{id:'d5',label:'Apple Card',balance:0,apr:20,min:0}],
     savings:[{id:'s2',label:'Emergency Fund',current:1000,target:2500},{id:'s3',label:'Sinking Fund',current:0,target:1000}]},
-  categories:[{id:'transport',label:'Gas / Transport',budget:175,note:'Current plan cap: gas, transport, parking, small vehicle-related costs'},{id:'food',label:'Food & Personal',budget:150,note:'Current plan cap: food and personal essentials'},{id:'dining',label:'Fast Food',budget:60,note:'Current plan cap: fast food, coffee, restaurants, snacks'},{id:'personal',label:'Online Shopping',budget:50,note:'Current plan cap: Amazon, online shopping, impulse purchases'},{id:'bills',label:'Verizon + Subscriptions (Est.)',budget:214,note:'Estimate kept: Verizon about $140 plus subscriptions about $74'},{id:'household',label:'Unassigned / Misc. Buffer',budget:0,note:'No extra cap assigned in current plan'}],
+  categories:[{id:'transport',label:'Gas / Transport',budget:175,note:'Current plan cap: gas, transport, parking, small vehicle-related costs'},{id:'food',label:'Food & Personal',budget:150,note:'Current plan cap: food and personal essentials'},{id:'dining',label:'Fast Food',budget:60,note:'Current plan cap: fast food, coffee, restaurants, snacks'},{id:'personal',label:'Online Shopping',budget:50,note:'Current plan cap: Amazon, online shopping, impulse purchases'},{id:'bills',label:'Visible + Subscriptions (Est.)',budget:161,note:'Estimate kept after carrier switch: Visible plus subscriptions'},{id:'household',label:'Unassigned / Misc. Buffer',budget:0,note:'No extra cap assigned in current plan'}],
   bills:[{id:'rent',label:'Rent',amount:800},{id:'electric',label:'Electric',amount:150},{id:'internet',label:'Internet',amount:50},{id:'groceries',label:'Groceries',amount:300}],
   debtSequence:[['1','Move Fund','Finish liquidity first so the move does not create new debt.'],['2','NW Bank Loan','Clear Sonia’s 12.50% debt after the cash floor is safe.'],['3','NFCU Visa','Highest active revolving balance and high APR.'],['4','Family Debt','Keep consistent repayment rhythm and preserve trust.'],['5','Emergency Funds','Build both cash buffers.'],['6','Vehicle Loan','Longer-term payoff after high-interest pressure drops.']]
 };
+
+
+const DEFAULT_PAY_LOGS={
+  daniel:[{amount:617.94,date:'2026-06-17',source:'RAC payroll 06/17',period:'2026-06-17',ts:'2026-06-21T00:58:52.145Z'}],
+  sonia:[{amount:1000,date:'2026-06-10',source:'',period:'2026-06-10',ts:'2026-06-12T01:40:18.998Z'}]
+};
+const DEFAULT_PERIOD_STATE={
+  daniel:{period:'2026-06-17',saved:500,spend:{transport:634.17,food:1333.52,dining:207.31,personal:171.76,bills:269.96,household:0}},
+  sonia:{period:'2026-06-10',saved:0,spend:{transport:0,food:0,dining:200,personal:0,bills:0,household:0}}
+};
+const DEFAULT_WALLET={daniel:{c:35,s:0},sonia:{c:0,s:0}};
 
 const DANIEL_STATEMENT_BASELINE = {
   incomeMonthly:3200,
@@ -348,24 +359,28 @@ function saving(id){return allSavings().find(s=>s.id===id)}
 function bal(id){const d=debt(id), s=saving(id);return Number(J('b:'+id,d?.balance??s?.current??0))}
 function goal(id){const d=debt(id), s=saving(id);return Number(J('g:'+id,d?.balance??s?.target??1))}
 function inc(p){return Number(J('inc:'+p,DEFAULTS[p].income))}
-function spent(p,id){return Number(J('cs:'+p+':'+id,0))}
-function savedPeriod(p){return Number(J('sv:'+p,0))}
-function log(p){return J('pay:'+p,[])}
+function spent(p,id){return Number(J('cs:'+p+':'+id,DEFAULT_PERIOD_STATE[p]?.spend?.[id]||0))}
+function savedPeriod(p){return Number(J('sv:'+p,DEFAULT_PERIOD_STATE[p]?.saved||0))}
+function log(p){return J('pay:'+p,DEFAULT_PAY_LOGS[p]||[])}
 function latestPay(p){const l=log(p);return l.length?Number(l[l.length-1].amount||0):0}
-function activePeriod(p){return J('period:'+p,'No active period')}
+function activePeriod(p){return J('period:'+p,DEFAULT_PERIOD_STATE[p]?.period||'No active period')}
 function totalPay(){return persons.reduce((s,p)=>s+latestPay(p),0)}
 function totalSpent(){return cats().reduce((s,c)=>s+persons.reduce((a,p)=>a+spent(p,c.id),0),0)}
 function totalSaved(){return persons.reduce((s,p)=>s+savedPeriod(p),0)}
 function sharedGoals(){
-  return J('sharedGoals',[
-    {id:'move',name:'Moving Goal',current:1000,target:1950},
-    {id:'next',name:'Next Shared Goal',current:0,target:500}
-  ]);
+  const move=savingsList('daniel').find(x=>x.id==='s0');
+  const danEmer=savingsList('daniel').find(x=>x.id==='s1');
+  const sonEmer=savingsList('sonia').find(x=>x.id==='s2');
+  return [
+    {id:'move',name:'Move Fund',current:bal('s0'),target:goal('s0')},
+    {id:'emergency',name:'Household Emergency Savings',current:bal('s1')+bal('s2'),target:goal('s1')+goal('s2')}
+  ];
 }
 function sharedGoalTotal(){return sharedGoals().reduce((s,g)=>s+Number(g.current||0),0)}
 function sharedGoalTargetTotal(){return sharedGoals().reduce((s,g)=>s+Number(g.target||0),0)}
 function sharedGoalById(id){return sharedGoals().find(g=>g.id===id)}
-function saveSharedGoals(list){S('sharedGoals',list,true)}
+function saveSharedGoals(list){localStorage.removeItem('sharedGoals');toast('Shared goals now follow live savings trackers')}
+
 
 function minDebtPaymentTotal(p){
   return debtList(p).reduce((s,d)=>s+Number(d.min||0),0);
@@ -434,7 +449,13 @@ function totalCap(){return cats().reduce((s,c)=>s+c.budget,0)}
 function leftToSpend(){return totalPay()-totalSpent()-totalSaved()}
 function spentPeriod(p){return cats().reduce((sum,c)=>sum+spent(p,c.id),0)}
 function periodLeft(p){return latestPay(p)-spentPeriod(p)-savedPeriod(p)}
-function totals(){const debt=allDebts().reduce((s,d)=>s+bal(d.id),0), sav=allSavings().reduce((s,x)=>s+bal(x.id),0), shared=sharedGoalTotal(), wallet=persons.reduce((s,p)=>s+Number(J('w:'+p+':c',0))+Number(J('w:'+p+':s',0)),0), assets=sav+shared+wallet;return{debt,assets,nw:assets-debt,burn:allDebts().reduce((s,d)=>s+bal(d.id)*(d.apr/100/12),0)}}
+function liveDebtTotal(){return allDebts().reduce((s,d)=>s+bal(d.id),0)}
+function liveAssetTotal(){return allSavings().reduce((s,x)=>s+bal(x.id),0)+persons.reduce((s,p)=>s+Number(J('w:'+p+':c',DEFAULT_WALLET[p]?.c||0))+Number(J('w:'+p+':s',DEFAULT_WALLET[p]?.s||0)),0)}
+function liveNetWorth(){return liveAssetTotal()-liveDebtTotal()}
+function liveInterestBurn(){return allDebts().reduce((s,d)=>s+bal(d.id)*(Number(d.apr||0)/100/12),0)}
+function liveTotals(){return{debt:liveDebtTotal(),assets:liveAssetTotal(),nw:liveNetWorth(),burn:liveInterestBurn()}}
+
+function totals(){return liveTotals()}
 function toast(m){const b=$('#toastbox'),d=document.createElement('div');d.className='toast';d.textContent=m;b.appendChild(d);setTimeout(()=>{d.style.opacity=0;d.style.transform='translateY(4px)'},2200);setTimeout(()=>d.remove(),2700)}
 function last(){const v=J('lastUpdated',null);$('#lastUpdated').textContent=v?'Saved '+new Date(v).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'Not saved yet'}
 function table(h,r){return`<div class="table-wrap"><table><thead><tr>${h.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${r.map(row=>`<tr>${row.map(c=>`<td class="${String(c).includes('$')?'pv':''}">${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`}
@@ -659,8 +680,8 @@ function interestBurnBreakdown(){
   </div>`;
 }
 function combinedDebtSummaryCard(){
-  const t=totals();
-  return `<div class="card stack summary-card" style="grid-column:1/-1">
+  const t=liveTotals();
+  return `<div id="combinedDebtSummaryCard" class="card stack summary-card" style="grid-column:1/-1">
     <h2>Combined Debt Summary</h2>
     <div class="grid four">
       <div class="tile"><div class="label">Total household debt</div><div class="mini red pv">${money(t.debt)}</div></div>
@@ -713,7 +734,7 @@ function missionArcCircle(r,item){
   <circle class="ring-fill" cx="130" cy="130" r="${r}" stroke="${item.color}" stroke-width="10" stroke-dasharray="${filled.toFixed(2)} ${empty.toFixed(2)}" stroke-dashoffset="0"></circle>`;
 }
 function renderMissionControlRings(){
-  const t=totals(), data=missionRingData();
+  const t=liveTotals(), data=missionRingData();
   const radii=[42,54,66,78,90,102];
   const rings=data.map((item,i)=>missionArcCircle(radii[i],item)).join('');
   const legend=data.map(item=>`<div class="mission-legend-row"><span class="mission-dot" style="background:${item.color}"></span><div><strong>${item.label}</strong><div class="fine pv">${item.detail}</div></div><span class="pill">${item.progress.toFixed(0)}%</span></div>`).join('');
@@ -824,8 +845,8 @@ function nextActionState(){
   return {cls:'',title:'Shift into wealth-building',amount:'Debt cleared',note:'Route freed payments into HYSA, Roth IRA, 401(k), and investing.',badge:'Phase 5'};
 }
 function nextActionCard(){
-  const n=nextActionState(), t=totals(), m=moveCountdownData();
-  return '<div class="card stack next-action-card '+n.cls+'" style="grid-column:1/-1">'+
+  const n=nextActionState(), t=liveTotals(), m=moveCountdownData();
+  return '<div id="nextActionCard" class="card stack next-action-card '+n.cls+'" style="grid-column:1/-1">'+
     '<div class="row wrap"><div><p class="kicker">Next Action</p><h2 class="next-action-title">'+n.title+'</h2></div><span class="pill '+(n.cls==='danger'?'red':n.cls==='warn'?'amber':'green')+'">'+n.badge+'</span></div>'+
     '<div class="next-action-big pv">'+n.amount+'</div>'+
     '<p class="fine">'+n.note+'</p>'+
@@ -903,6 +924,28 @@ function deletePaycheckLog(p,i){
   renderHome();
   refreshAll();
   toast(P[p].name+' paycheck deleted');
+}
+
+function refreshNextActionCard(){
+  const el=$('#nextActionCard');
+  if(!el)return;
+  const tmp=document.createElement('div');
+  tmp.innerHTML=nextActionCard();
+  const fresh=tmp.firstElementChild;
+  if(fresh)el.replaceWith(fresh);
+}
+function refreshCombinedDebtSummaryCard(){
+  const el=$('#combinedDebtSummaryCard');
+  if(!el)return;
+  const tmp=document.createElement('div');
+  tmp.innerHTML=combinedDebtSummaryCard();
+  const fresh=tmp.firstElementChild;
+  if(fresh)el.replaceWith(fresh);
+}
+function refreshHomeLiveCards(){
+  refreshNextActionCard();
+  refreshCombinedDebtSummaryCard();
+  refreshMissionControl();
 }
 
 function renderHome(){
@@ -1206,9 +1249,9 @@ function renderPlanTab(){
 }
 function applyStatementBaselineToDaniel(){
   S('inc:daniel',DANIEL_STATEMENT_BASELINE.incomeMonthly,true);
-  S('b:d0',9315.95,true);
-  S('b:d1',22010.21,true);
-  S('b:s4',3648.52,true);
+  S('b:d0',9089.22,true);
+  S('b:d1',21584.01,true);
+  S('b:s4',2240.98,true);
   refreshAll();
   toast('Daniel statement baseline applied');
 }
@@ -1237,7 +1280,7 @@ function renderPerson(p){
       <button class="jump-chip" data-jump="${p}-debt">Debt</button>
       <button class="jump-chip" data-jump="${p}-log">Log</button>
     </div></div>
-    <details class="section-toggle" id="${p}-wallet"><summary>Wallet</summary><div class="card stack" style="grid-column:1/-1"><h2>Wallet</h2><div class="grid two"><div class="field"><label>Checking</label><input data-wallet="${p}:c" type="number" step="0.01" value="${J('w:'+p+':c',0)}"></div><div class="field"><label>Savings</label><input data-wallet="${p}:s" type="number" step="0.01" value="${J('w:'+p+':s',0)}"></div></div><div class="row"><span>Wallet total</span><strong id="${p}Wallet" class="${P[p].cls} pv">—</strong></div></div></details>
+    <details class="section-toggle" id="${p}-wallet"><summary>Wallet</summary><div class="card stack" style="grid-column:1/-1"><h2>Wallet</h2><div class="grid two"><div class="field"><label>Checking</label><input data-wallet="${p}:c" type="number" step="0.01" value="${J('w:'+p+':c',DEFAULT_WALLET[p]?.c||0)}"></div><div class="field"><label>Savings</label><input data-wallet="${p}:s" type="number" step="0.01" value="${J('w:'+p+':s',DEFAULT_WALLET[p]?.s||0)}"></div></div><div class="row"><span>Wallet total</span><strong id="${p}Wallet" class="${P[p].cls} pv">—</strong></div></div></details>
     <div class="card stack" id="${p}-start" data-pay-box="${p}"><h2>Start Here</h2><p class="fine">Log the paycheck. The Paycheck Plan updates immediately.</p><div class="grid"><div class="field"><label>Paycheck amount</label><input data-pay-amount="${p}" type="number" step="0.01" placeholder="0.00"></div><div class="field"><label>Date</label><input data-pay-date="${p}" type="date" value="${new Date().toISOString().slice(0,10)}"></div><div class="field"><label>Source</label><input data-pay-source="${p}" placeholder="${p==='daniel'?'RAC / VA':'Payroll'}"></div></div><button class="btn primary" data-save-pay="${p}">Save Paycheck + Reset ${P[p].name}</button></div>
     <div class="card stack" id="${p}-plan"><h2>Paycheck Plan</h2><p class="fine">Where the latest paycheck should go. Enter or log a paycheck and the allocation visual updates live.</p><div id="${p}AllocChart"></div><div id="${p}Alloc"></div></div>
     <details class="section-toggle" id="${p}-save"><summary>Savings</summary><div class="card stack" style="grid-column:1/-1"><h2>Savings</h2><div class="grid three"><div class="field"><label>Add savings amount</label><input id="${p}SavingsAdd" type="number" step="0.01" placeholder="0.00"></div><div class="field"><label>Apply to savings goal</label><select id="${p}SavingsSelect"></select></div><div style="display:flex;align-items:end"><button class="btn green" data-add-savings="${p}" style="width:100%">Record Savings</button></div></div><div id="${p}Savings" class="grid two"></div></div></details>
@@ -1281,7 +1324,7 @@ function projectionAt(months){
     debtNow+=b; debtFuture+=projected; interestAvoided += Math.max(0,b-projected)*(d.apr/100/12);
   });
   const savingsFuture=allSavings().reduce((s,x)=>s+bal(x.id),0)+(savePlan.daniel+savePlan.sonia)*months;
-  const wallet=persons.reduce((s,p)=>s+Number(J('w:'+p+':c',0))+Number(J('w:'+p+':s',0)),0);
+  const wallet=persons.reduce((s,p)=>s+Number(J('w:'+p+':c',DEFAULT_WALLET[p]?.c||0))+Number(J('w:'+p+':s',DEFAULT_WALLET[p]?.s||0)),0);
   const nw=savingsFuture+wallet-debtFuture;
   return {months,debtFuture,savingsFuture,nw,interestAvoided};
 }
@@ -1324,7 +1367,7 @@ function refreshHome(){
   const status=householdStatusLabel(), l=leftToSpend();
   const homeLeft=$('#homeLeft');
   if(homeLeft){homeLeft.textContent=money(l);homeLeft.className='hero pv '+status[1];}
-  refreshMissionControl();
+  refreshHomeLiveCards();
 
   const hp=$('#homePay'); if(hp)hp.textContent=money(totalPay());
   const hs=$('#homeSaved'); if(hs)hs.textContent=money(totalSaved());
@@ -1360,7 +1403,7 @@ function refreshHome(){
 function refreshPerson(p){
   const sList=savingsList(p), personalSpent=cats().reduce((sum,c)=>sum+spent(p,c.id),0), latest=latestPay(p), sv=savedPeriod(p), left=latest-personalSpent-sv;
   $('#'+p+'Left').textContent=money(left); $('#'+p+'Left').className='hero pv '+(left>=0?P[p].cls:'red'); $('#'+p+'Period').textContent=`Active period: ${activePeriod(p)} · paycheck ${money(latest)} · savings ${money(sv)} · spending ${money(personalSpent)}`;
-  $('#'+p+'Wallet').textContent=money(Number(J('w:'+p+':c',0))+Number(J('w:'+p+':s',0)));
+  $('#'+p+'Wallet').textContent=money(Number(J('w:'+p+':c',DEFAULT_WALLET[p]?.c||0))+Number(J('w:'+p+':s',DEFAULT_WALLET[p]?.s||0)));
   $('#'+p+'SavingsSelect').innerHTML=sList.map(x=>`<option value="${x.id}">${x.label}</option>`).join('');
   $('#'+p+'Savings').innerHTML=sList.map(x=>renderSavingsSlider(x)).join('');
   $('#'+p+'Cats').innerHTML=cats().map(c=>{const v=spent(p,c.id), r=clamp(v/Math.max(1,c.budget)*100,0,100);return`<div class="cap-card stack"><div class="cap-head"><div><strong>${c.label}</strong><p class="fine pv">${money(v)} spent against combined category budget of ${money(c.budget)}</p></div><span class="pill ${P[p].cls}">${pct(r)}</span></div><div class="bar"><div class="fill" style="width:${r}%;background:${P[p].color}"></div></div><div class="grid two"><div class="field"><label>Add spending</label><input id="${p}-${c.id}-add" data-add-spend-input="${p}:${c.id}" type="number" step="0.01" placeholder="0.00"></div><div style="display:flex;align-items:end"><button class="btn small" data-add-spending="${p}:${c.id}">Add Entry</button></div></div></div>`}).join('');
@@ -1599,7 +1642,15 @@ function gsgReset(){
   }
 }
 
+
+function migrateDeadSharedGoals(){
+  if(localStorage.getItem('sharedGoals'))localStorage.removeItem('sharedGoals');
+  if(J('cat:name:bills','') && String(J('cat:name:bills','')).includes('Verizon'))S('cat:name:bills','Visible + Subscriptions (Est.)',true);
+  if(Number(J('cb:bills',161))!==161)S('cb:bills',161,true);
+}
+
 function init(){
+  migrateDeadSharedGoals();
   if(J('pm',false)){document.body.classList.add('pm');$('#privacyBtn').textContent='Show $'}
   const mam=$('#mobileActionMount'); if(mam)mam.innerHTML=mobileActionBar();renderGuide();renderHome();renderPerson('daniel');renderPerson('sonia');renderHousehold();renderPlanTab();restorePlaybookChecks();renderSettings();bind();refreshAll();
   const profile=sessionStorage.getItem('activeProfile')||J('lastProfile','daniel');$('#profileSelect').value=profile;
