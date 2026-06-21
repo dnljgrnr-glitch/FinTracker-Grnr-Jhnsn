@@ -274,7 +274,6 @@ details{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06)
   <button class="tab" data-tab="daniel">Daniel</button>
   <button class="tab" data-tab="sonia">Sonia</button>
   <button class="tab" data-tab="household">Household</button>
-  <button class="tab" data-tab="playbook">Playbook</button>
   <button class="tab" data-tab="settings">Settings</button>
 </div></nav>
 
@@ -960,65 +959,53 @@ function refreshHomeLiveCards(){
   refreshMissionControl();
 }
 
+
+function walletTotal(p){return Number(J('w:'+p+':c',DEFAULT_WALLET[p]?.c||0))+Number(J('w:'+p+':s',DEFAULT_WALLET[p]?.s||0))}
+function personDebtTotal(p){return debtList(p).reduce((s,d)=>s+bal(d.id),0)}
+function personSavingsTotal(p){return savingsList(p).reduce((s,x)=>s+bal(x.id),0)}
+function plural(n,one,many){return Number(n)===1?one:many}
+function householdCapSummaryRows(){
+  return cats().map(c=>{
+    const d=spent('daniel',c.id), s=spent('sonia',c.id), total=d+s, cap=c.budget, used=cap>0?(total/cap*100):0, left=cap-total, status=used>=100?'red':used>=75?'amber':'green';
+    return `<div class="cap-row"><div><strong>${c.label}</strong><small class="pv">Daniel ${money(d)} · Sonia ${money(s)} · cap ${money(cap)}</small></div><span class="pill ${status}">${used.toFixed(0)}%</span><strong class="${status} pv">${left>=0?money(left)+' left':'Over '+money(Math.abs(left))}</strong></div>`;
+  }).join('');
+}
+function sharedMoneyFlowCard(){
+  return `<div class="card stack" style="grid-column:1/-1"><h2>Shared Money Flow</h2><div class="grid flow-grid"><div class="tile"><div class="label">Combined Paychecks</div><div id="homePay" class="stat green pv">—</div></div><div class="tile"><div class="label">Combined Savings</div><div id="homeSaved" class="stat blue pv">—</div></div><div class="tile"><div class="label">Combined Spending</div><div id="homeSpent" class="stat red pv">—</div></div></div><p id="periodLine" class="fine"></p></div>`;
+}
+function combinedPaycheckPlanCard(){
+  return `<div class="card stack" style="grid-column:1/-1"><h2>Combined Paycheck Plan</h2><p class="fine">Shared view of where both paychecks are assigned before spending happens.</p><div id="combinedPlan" class="grid two"></div></div>`;
+}
+function sharedBillsCoverageCard(){
+  const total=bills().reduce((s,b)=>s+Number(b.amount||0),0);
+  return `<details class="section-toggle" open style="grid-column:1/-1"><summary>Shared Bills Coverage — ${money(total)} bill target</summary><div class="card stack"><div id="sharedBillsCoverage"></div></div></details>`;
+}
+function debtPriorityCard(){
+  const n=allDebts().length, total=liveDebtTotal();
+  return `<details class="section-toggle" style="grid-column:1/-1"><summary>Debt Priority — ${money(total)} across ${n} ${plural(n,'debt','debts')}</summary><div class="card stack"><div id="debtPriorityHome">${debtPriorityBlock()}</div><p class="fine">For full phase guidance, use Get Started.</p></div></details>`;
+}
+function householdCapsCard(){
+  return `<details class="section-toggle" open style="grid-column:1/-1"><summary>Household Spending Caps — ${money(cats().reduce((s,c)=>s+Number(c.budget||0),0))} total cap</summary><div class="card stack"><div id="capBars" class="stack">${householdCapSummaryRows()}</div><details class="fine"><summary>Budget adjustment — live overage correction</summary><div id="budgetAdjustment" class="stack"></div></details></div></details>`;
+}
+function playbookProcessReference(){
+  return '<div class="gsg-ref">'+
+    '<h3 class="gsg-reftitle">Operating Reference</h3>'+
+    '<ul class="gsg-mile">'+
+      '<li><b>Paycheck walkthrough</b> — Enter paycheck, set aside shared bills, move savings/debt money, then record spending.</li>'+
+      '<li><b>Operating rule</b> — Money moves before swiping. Bills, savings, and debt get assigned first.</li>'+
+      '<li><b>Spending guardrail</b> — Every purchase gets named under a cap category while it is happening.</li>'+
+      '<li><b>When off plan</b> — Record the expense first, then decide whether it comes from buffer, delayed savings, or reduced spending.</li>'+
+    '</ul>'+
+    '<p class="gsg-key">The Playbook tab was removed from navigation because these process rules belong here with the phase checklist.</p>'+
+  '</div>';
+}
+
 function renderHome(){
-  const sharedMoneyFlow = '<div class="card stack" style="grid-column:1/-1">'+
-    '<h2>Shared Money Flow</h2>'+
-    '<div class="grid flow-grid">'+
-      '<div class="tile"><div class="label">Combined Paychecks</div><div id="homePay" class="stat green pv">—</div></div>'+
-      '<div class="tile"><div class="label">Combined Savings</div><div id="homeSaved" class="stat blue pv">—</div></div>'+
-      '<div class="tile"><div class="label">Combined Spending</div><div id="homeSpent" class="stat red pv">—</div></div>'+
-    '</div>'+
-    '<p id="periodLine" class="fine"></p>'+
-  '</div>';
-
-  const combinedPaycheckPlan = '<div class="card stack" style="grid-column:1/-1">'+
-    '<h2>Combined Paycheck Plan</h2>'+
-    '<p class="fine">Shared view of where both paychecks are assigned before spending happens.</p>'+
-    '<div id="combinedPlan" class="grid two"></div>'+
-  '</div>';
-
-  const sharedBillsCoverage = '<div class="card stack" style="grid-column:1/-1">'+
-    '<h2>Shared Bills Coverage</h2>'+
-    '<div id="sharedBillsCoverage"></div>'+
-  '</div>';
-
-  const transparencySnapshotCard = '<div class="card stack" style="grid-column:1/-1">'+
-    '<h2>Transparency Snapshot</h2>'+
-    '<p class="fine">Shared view of income, debt, assets, net worth, and household pressure.</p>'+
-    '<div id="transparencySnapshot"></div>'+
-  '</div>';
-
-  const sharedGoalsCard = '<div class="card stack">'+
-    '<h2>Shared Goals</h2>'+
-    '<div id="sharedGoalsHome" class="stack"></div>'+
-  '</div>';
-
-  const debtPriorityCard = '<div class="card stack">'+
-    '<h2>Debt Priority</h2>'+
-    '<div id="debtPriorityHome"></div>'+
-  '</div>';
-
-  const capsCard = '<div class="card stack" style="grid-column:1/-1">'+
-    '<h2>Household Spending Caps</h2>'+
-    '<div id="capBars" class="stack"></div>'+
-    '<details class="fine"><summary>Budget adjustment when one category goes over</summary><div id="budgetAdjustment" class="stack"></div></details>'+
-  '</div>';
-
   $('#home').innerHTML =
     '<div class="grid two">'+
       nextActionCard()+
       missionControlSection()+
       homePaycheckConsole()+
-      '<details class="home-support"><summary>Move Fund Countdown</summary><div class="home-support-body">'+moveCountdownCard()+'</div></details>'+
-      '<details class="home-support"><summary>Interest Burn</summary><div class="home-support-body">'+interestBurnBreakdown()+'</div></details>'+
-      '<details class="home-support"><summary>Combined Debt Summary</summary><div class="home-support-body">'+combinedDebtSummaryCard()+'</div></details>'+
-      '<details class="home-support"><summary>Shared Money Flow</summary><div class="home-support-body">'+sharedMoneyFlow+'</div></details>'+
-      '<details class="home-support"><summary>Combined Paycheck Plan</summary><div class="home-support-body">'+combinedPaycheckPlan+'</div></details>'+
-      '<details class="home-support"><summary>Shared Bills Coverage</summary><div class="home-support-body">'+sharedBillsCoverage+'</div></details>'+
-      '<details class="home-support"><summary>Transparency Snapshot</summary><div class="home-support-body">'+transparencySnapshotCard+'</div></details>'+
-      '<details class="home-support"><summary>Shared Goals</summary><div class="home-support-body">'+sharedGoalsCard+'</div></details>'+
-      '<details class="home-support"><summary>Debt Priority</summary><div class="home-support-body">'+debtPriorityCard+'</div></details>'+
-      '<details class="home-support"><summary>Household Spending Caps</summary><div class="home-support-body">'+capsCard+'</div></details>'+
     '</div>';
 }
 function danielBaselineCard(){
@@ -1034,8 +1021,8 @@ function danielBaselineCard(){
       <div class="tile"><div class="label">Operating spend</div><div class="mini red pv">${money(b.mayOperatingExpenses)}</div></div>
       <div class="tile"><div class="label">Gap vs income</div><div class="mini red pv">${money(b.netVsModeledIncome)}</div></div>
     </div>
-    <details class="fine"><summary>Top May pressure points</summary><div class="stack">${pressure}</div></details>
-    <details class="fine"><summary>Current fixed obligations</summary><div class="stack">${fixed}</div></details><button class="btn small" data-apply-daniel-baseline="1">Apply Statement Baseline</button>
+    <details class="fine"><summary>Top May pressure points — 8 pressure items</summary><div class="stack">${pressure}</div></details>
+    <details class="fine"><summary>Current fixed obligations — 7 listed bills</summary><div class="stack">${fixed}</div></details><button class="btn small" data-apply-daniel-baseline="1">Apply Statement Baseline</button>
   </div>`;
 }
 
@@ -1279,36 +1266,31 @@ function mobileActionBar(){
 }
 
 function renderPerson(p){
+  const wTotal=walletTotal(p), sTotal=personSavingsTotal(p), dTotal=personDebtTotal(p), dCount=debtList(p).length, lCount=log(p).length;
   $('#'+p).innerHTML=`<div class="grid two">
     <div class="card big stack" style="grid-column:1/-1"><p class="kicker">${P[p].name} active period</p><div id="${p}Left" class="hero ${P[p].cls} pv">—</div><p id="${p}Period" class="fine"></p></div>
     ${p==='daniel'?danielBaselineCard():''}
     ${p==='daniel'?moveCountdownCard():''}
-    <div class="card stack" style="grid-column:1/-1" id="${p}-quicknav"><h2>Quick Jump</h2><div class="jump-chips">
-      <button class="jump-chip" data-jump="${p}-start">Start</button>
-      <button class="jump-chip" data-jump="${p}-plan">Plan</button>
-      <button class="jump-chip" data-jump="${p}-spend">Spend</button>
-      <button class="jump-chip" data-jump="${p}-wallet">Wallet</button>
-      <button class="jump-chip" data-jump="${p}-save">Save</button>
-      <button class="jump-chip" data-jump="${p}-debt">Debt</button>
-      <button class="jump-chip" data-jump="${p}-log">Log</button>
-    </div></div>
-    <details class="section-toggle" id="${p}-wallet"><summary>Wallet</summary><div class="card stack" style="grid-column:1/-1"><h2>Wallet</h2><div class="grid two"><div class="field"><label>Checking</label><input data-wallet="${p}:c" type="number" step="0.01" value="${J('w:'+p+':c',DEFAULT_WALLET[p]?.c||0)}"></div><div class="field"><label>Savings</label><input data-wallet="${p}:s" type="number" step="0.01" value="${J('w:'+p+':s',DEFAULT_WALLET[p]?.s||0)}"></div></div><div class="row"><span>Wallet total</span><strong id="${p}Wallet" class="${P[p].cls} pv">—</strong></div></div></details>
+    <details class="section-toggle" open id="${p}-wallet"><summary>Wallet — ${money(wTotal)} total</summary><div class="card stack" style="grid-column:1/-1"><h2>Wallet</h2><div class="grid two"><div class="field"><label>Checking</label><input data-wallet="${p}:c" type="number" step="0.01" value="${J('w:'+p+':c',DEFAULT_WALLET[p]?.c||0)}"></div><div class="field"><label>Savings</label><input data-wallet="${p}:s" type="number" step="0.01" value="${J('w:'+p+':s',DEFAULT_WALLET[p]?.s||0)}"></div></div><div class="row"><span>Wallet total</span><strong id="${p}Wallet" class="${P[p].cls} pv">—</strong></div></div></details>
     <div class="card stack" id="${p}-start" data-pay-box="${p}"><h2>Start Here</h2><p class="fine">Log the paycheck. The Paycheck Plan updates immediately.</p><div class="grid"><div class="field"><label>Paycheck amount</label><input data-pay-amount="${p}" type="number" step="0.01" placeholder="0.00"></div><div class="field"><label>Date</label><input data-pay-date="${p}" type="date" value="${new Date().toISOString().slice(0,10)}"></div><div class="field"><label>Source</label><input data-pay-source="${p}" placeholder="${p==='daniel'?'RAC / VA':'Payroll'}"></div></div><button class="btn primary" data-save-pay="${p}">Save Paycheck + Reset ${P[p].name}</button></div>
     <div class="card stack" id="${p}-plan"><h2>Paycheck Plan</h2><p class="fine">Where the latest paycheck should go. Enter or log a paycheck and the allocation visual updates live.</p><div id="${p}AllocChart"></div><div id="${p}Alloc"></div></div>
-    <details class="section-toggle" id="${p}-save"><summary>Savings</summary><div class="card stack" style="grid-column:1/-1"><h2>Savings</h2><div class="grid three"><div class="field"><label>Add savings amount</label><input id="${p}SavingsAdd" type="number" step="0.01" placeholder="0.00"></div><div class="field"><label>Apply to savings goal</label><select id="${p}SavingsSelect"></select></div><div style="display:flex;align-items:end"><button class="btn green" data-add-savings="${p}" style="width:100%">Record Savings</button></div></div><div id="${p}Savings" class="grid two"></div></div></details>
-    <div class="card stack" style="grid-column:1/-1" id="${p}-spend"><h2>Monthly Spending</h2><p class="fine">Add an amount to the category. The progress meter and Home cap bars update automatically.</p><div id="${p}Cats" class="stack"></div></div>
-    <details class="section-toggle" id="${p}-debt"><summary>Debt Progress</summary><div class="card stack"><h2>Debt Progress</h2><div id="${p}Debt"></div></div></details>
-    <details class="section-toggle" id="${p}-log"><summary>Paycheck Log</summary><div class="card stack" style="grid-column:1/-1"><h2>Paycheck Log</h2><div id="${p}PayLog"></div></div></details>
+    <details class="section-toggle" id="${p}-save"><summary>Savings — ${money(sTotal)} saved</summary><div class="card stack" style="grid-column:1/-1"><h2>Savings</h2><div class="grid three"><div class="field"><label>Add savings amount</label><input id="${p}SavingsAdd" type="number" step="0.01" placeholder="0.00"></div><div class="field"><label>Apply to savings goal</label><select id="${p}SavingsSelect"></select></div><div style="display:flex;align-items:end"><button class="btn green" data-add-savings="${p}" style="width:100%">Record Savings</button></div></div><div id="${p}Savings" class="grid two"></div></div></details>
+    <div class="card stack" style="grid-column:1/-1" id="${p}-spend"><h2>Monthly Spending</h2><p class="fine">Add an amount to the category. The progress meter and Household cap bars update automatically.</p><div id="${p}Cats" class="stack"></div></div>
+    <details class="section-toggle" open id="${p}-debt"><summary>Debt Progress — ${money(dTotal)} across ${dCount} ${plural(dCount,'debt','debts')}</summary><div class="card stack"><h2>Debt Progress</h2><div id="${p}Debt"></div></div></details>
+    <details class="section-toggle" id="${p}-log"><summary>Paycheck Log — ${lCount} ${plural(lCount,'entry','entries')}</summary><div class="card stack" style="grid-column:1/-1"><h2>Paycheck Log</h2><div id="${p}PayLog"></div></div></details>
   </div>`;
 }
 function renderHousehold(){
   $('#household').innerHTML=`<div class="grid two">
     <div class="card stack" style="grid-column:1/-1"><h2>Bill Split Calculator</h2><p class="fine">Fully editable. Change the split, bill names, and bill amounts at any time.</p><div class="grid two"><div class="field"><label>Daniel %</label><input data-split="daniel" type="number" step="1" value="${J('split:daniel',59)}"></div><div class="field"><label>Sonia %</label><input data-split="sonia" type="number" step="1" value="${J('split:sonia',41)}"></div></div><div id="billRows" class="stack"></div><button class="btn" id="addBill">Add Bill</button></div>
-    <div class="card stack" style="grid-column:1/-1"><h2>Shared Goal Funds</h2><p class="fine">Use this for moving, tattoos, vacation, registrations, concerts, marathon/event fees, or any shared fund. These count as household assets and update Home.</p><div id="sharedGoalRows" class="stack"></div><button class="btn" id="addSharedGoal">Add Shared Goal</button></div>
-    <div class="card stack"><h2>Debt Payoff Sequence</h2>${table(['Step','Priority','Reason'],DEFAULTS.debtSequence)}</div>
+    ${sharedMoneyFlowCard()}
+    ${combinedPaycheckPlanCard()}
+    ${sharedBillsCoverageCard()}
+    ${debtPriorityCard()}
+    ${householdCapsCard()}
+    <div class="card stack" style="grid-column:1/-1"><h2>Phase Reference</h2><p class="fine">The duplicate debt payoff sequence table was removed from Household. Use Get Started for the phase checklist and operating order.</p><button class="btn" onclick="showTab('getstarted')">Open Get Started</button></div>
   </div>`;
 }
-
 function monthlyDebtPlan(){
   const dAlloc=J('alloc:daniel',DEFAULTS.daniel.alloc), sAlloc=J('alloc:sonia',DEFAULTS.sonia.alloc);
   const dInc=inc('daniel'), sInc=inc('sonia');
@@ -1432,7 +1414,7 @@ function refreshHousehold(){
   const sd=Number(J('split:daniel',59)), ss=Number(J('split:sonia',41)), totalPct=Math.max(1,sd+ss); let total=0;
   $('#billRows').innerHTML=bills().map((b,i)=>{total+=Number(b.amount||0);const ds=b.amount*(sd/totalPct), so=b.amount*(ss/totalPct);return`<div class="cap-card grid four"><div class="field"><label>Bill name</label><input data-bill-name="${i}" value="${b.label}"></div><div class="field"><label>Amount</label><input data-bill-amount="${i}" type="number" step="0.01" value="${b.amount}"></div><div><div class="label">Daniel</div><div class="mini blue pv">${money(ds)}</div></div><div><div class="label">Sonia</div><div class="mini green pv">${money(so)}</div></div><button class="btn small danger" data-remove-bill="${i}">Remove</button></div>`}).join('')+`<div class="row"><strong>Total Bills</strong><strong class="pv">${money(total)}</strong></div>`;
 }
-function refreshAll(){refreshHome();persons.forEach(refreshPerson);refreshHousehold();if($('#playbook')){renderPlanTab();restorePlaybookChecks();}const ds=$('#dtiSnapshot');if(ds)ds.innerHTML=dtiSnapshot();const hp=$('#householdPositionSettings');if(hp)hp.innerHTML=householdPositionBlock();const pm=$('#projectionMap');if(pm)pm.innerHTML=projectionTable();const ba=$('#budgetAdjustment');if(ba)ba.innerHTML=categoryBudgetAdjustmentRows();refreshSliderFills();last()}
+function refreshAll(){refreshHome();persons.forEach(refreshPerson);refreshHousehold();if($('#playbook') && $('.tab[data-tab="playbook"]')){renderPlanTab();restorePlaybookChecks();}const ds=$('#dtiSnapshot');if(ds)ds.innerHTML=dtiSnapshot();const hp=$('#householdPositionSettings');if(hp)hp.innerHTML=householdPositionBlock();const pm=$('#projectionMap');if(pm)pm.innerHTML=projectionTable();const ba=$('#budgetAdjustment');if(ba)ba.innerHTML=categoryBudgetAdjustmentRows();refreshSliderFills();last()}
 function savePay(p,sourceEl=null){
   const box=sourceEl?.closest?.(`[data-pay-box="${p}"]`)||document;
   const amount=Number($(`[data-pay-amount="${p}"]`,box)?.value||0);
@@ -1453,7 +1435,7 @@ function savePay(p,sourceEl=null){
 function addSpending(p,id){const input=$(`#${p}-${id}-add`), amount=Number(input?.value||0); if(amount<=0){toast('Enter spending amount');return} S('cs:'+p+':'+id,spent(p,id)+amount,true); if(input)input.value=''; refreshAll(); toast('Spending recorded')}
 function addSavings(p){const amount=Number($(`#${p}SavingsAdd`)?.value||0), id=$(`#${p}SavingsSelect`)?.value; if(amount<=0||!id){toast('Enter savings amount');return} S('sv:'+p,savedPeriod(p)+amount,true); S('b:'+id,bal(id)+amount,true); $(`#${p}SavingsAdd`).value=''; refreshAll(); toast('Savings recorded')}
 function recordDebt(id){const amount=Number($(`#pay-${id}`)?.value||0); if(amount<=0){toast('Enter payment amount');return} S('b:'+id,Math.max(0,bal(id)-amount),true); $(`#pay-${id}`).value=''; refreshAll(); toast('Debt payment recorded')}
-function showTab(id){$$('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));$$('.panel').forEach(p=>p.classList.toggle('active',p.id===id));const labels={getstarted:'Get Started guide',home:'Household command center',household:'Shared bills and debt sequence',settings:'App settings',playbook:'Paycheck operating playbook',daniel:'Daniel detail page',sonia:'Sonia detail page'};$('#activeUserLine').textContent=labels[id]||'Financial OS';if(id==='home'){renderHome();refreshHome()}if(id==='getstarted'&&!$('#gsgPhases'))renderGuide()}
+function showTab(id){$$('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));$$('.panel').forEach(p=>p.classList.toggle('active',p.id===id));const labels={getstarted:'Get Started guide',home:'Household command center',household:'Shared bills and debt sequence',settings:'App settings',daniel:'Daniel detail page',sonia:'Sonia detail page'};$('#activeUserLine').textContent=labels[id]||'Financial OS';if(id==='getstarted'&&!$('#gsgPhases'))renderGuide()}
 function collect(){const out={},pref=['b:','g:','w:','cs:','cb:','sv:','pay:','period:','inc:','bill','bills:','alloc:','split:','apr:','cat:','save:','debt:'];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(pref.some(p=>k.startsWith(p))||['pm','lastUpdated','lastProfile','sharedGoals','ck:getstarted'].includes(k))out[k]=J(k,null)}return out}
 function download(name,text,type){const blob=new Blob([text],{type}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();URL.revokeObjectURL(a.href);a.remove()}
 
@@ -1593,7 +1575,7 @@ function renderGuide(){
         '<li><b>Month 32–33</b> — All debt gone (rollover-timing dependent); $700+ becomes free capital.</li>'+
       '</ul>'+
       '<p class="gsg-key">Visa: 15 mo at $700 vs 25 mo at minimum · $665 interest saved · $4.27/day Visa interest at start.</p>'+
-      '<button type="button" class="gsg-reset" onclick="gsgReset()">Reset guide</button>'+
+      playbookProcessReference()+ '<button type="button" class="gsg-reset" onclick="gsgReset()">Reset guide</button>'+
     '</div>'+
   '</section>';
   renderGuidePhases();
